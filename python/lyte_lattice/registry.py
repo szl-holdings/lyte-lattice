@@ -1,4 +1,4 @@
-"""Resolve N1–N25 organs. Unknown or missing modules fail closed."""
+"""Resolve N1–N27 organs. Unknown or missing modules fail closed."""
 from __future__ import annotations
 
 import importlib
@@ -53,7 +53,7 @@ def act(cell: str, payload: Mapping[str, Any] | None = None) -> dict[str, Any]:
     if status not in {"ok", "warn", "error", "blocked"}:
         status = "error"
     output = raw.get("output", raw)
-    honesty = raw.get("honesty") if raw.get("honesty") in {"LIVE", "STRUCTURAL-ONLY", "UNAVAILABLE"} else None
+    honesty = raw.get("honesty") if raw.get("honesty") in {"LIVE", "STRUCTURAL-ONLY", "UNAVAILABLE", "REPORTED"} else None
     return seal(cell=n, status=status, payload=p, output=output, honesty=honesty)
 
 

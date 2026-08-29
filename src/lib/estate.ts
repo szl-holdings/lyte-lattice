@@ -13,14 +13,14 @@ export const ESTATE = {
   lambda: "Conjecture 1",
   doctrine: "v11 LOCKED",
   order: "AO-2026-08-29-001",
-  slsa: "L1 honest · L2 attested · L3 roadmap",
+  slsa: "L1 honest \u00b7 L2 attested \u00b7 L3 roadmap",
 } as const;
 
 export const FRONTIERS: Array<{
   n: string;
   title: string;
   cited: string;
-  honesty: "STRUCTURAL-ONLY" | "LIVE" | "ROADMAP" | "UNAVAILABLE";
+  honesty: "STRUCTURAL-ONLY" | "LIVE" | "ROADMAP" | "UNAVAILABLE" | "REPORTED";
   inConsole: boolean;
   note?: string;
 }> = [
@@ -64,4 +64,20 @@ export const FRONTIERS: Array<{
   { n: "N23", title: "Rails", cited: "NVIDIA NeMo Guardrails", honesty: "LIVE", inConsole: true },
   { n: "N24", title: "Browser", cited: "Playwright / Stagehand / Browserbase", honesty: "LIVE", inConsole: true },
   { n: "N25", title: "Policy", cited: "AWS Cedar / Open Policy Agent", honesty: "LIVE", inConsole: true },
+  {
+    n: "N26",
+    title: "Inference",
+    cited: "szl-command-lab NVML/RAPL wrap",
+    honesty: "REPORTED",
+    inConsole: false,
+    note: "Wrap joule REPORTED from command-lab. Never MEASURED here. Never a fabricated joule.",
+  },
+  {
+    n: "N27",
+    title: "Train",
+    cited: "szl-forge Unsloth QLoRA; szl-gpu-bridge",
+    honesty: "UNAVAILABLE",
+    inConsole: false,
+    note: "GPU train UNAVAILABLE. CUDA absent. gpu-bridge NEVER_DISPATCH. Not Unsloth.",
+  },
 ];
