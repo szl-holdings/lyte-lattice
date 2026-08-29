@@ -44,7 +44,7 @@ door. Hub RUNNING only after Immune readback (`szl-holdings/immune`
 | Lyte window | [szl-holdings/lyte-services](https://github.com/szl-holdings/lyte-services) · compiler window, not this console |
 | Factory | [szl-holdings/a11oy-factory](https://github.com/szl-holdings/a11oy-factory) · Decision Cell Compiler |
 | Canonical flagship | [szl-holdings/a11oy](https://github.com/szl-holdings/a11oy) |
-| Product | [a-11-oy.com](https://a-11-oy.com) · **not certified** |
+| Product | [a-11-oy.com](https://a-11-oy.com) · **not certified** · bind tab [`/lyte`](https://a-11-oy.com/lyte) |
 | Proof | [a11oy.net](https://a11oy.net) |
 | Never | `a11oy.com` |
 

@@ -105,8 +105,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       <footer className="flex h-8 items-center justify-between gap-3 border-t border-border bg-sunken px-3 font-mono text-[10px] uppercase tracking-wider text-subtle sm:px-5">
         <span className="min-w-0 truncate">
           BIND · not flagship ·{" "}
-          <a href={ESTATE.product} className="text-muted hover:text-fg" target="_blank" rel="noreferrer">
-            a-11-oy.com
+          <a href={ESTATE.productBind} className="text-muted hover:text-fg" target="_blank" rel="noreferrer">
+            a-11-oy.com/lyte
           </a>{" "}
           not certified ·{" "}
           <a href={ESTATE.proof} className="text-muted hover:text-fg" target="_blank" rel="noreferrer">

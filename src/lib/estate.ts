@@ -1,6 +1,7 @@
 export const ESTATE = {
   org: "szl-holdings",
   product: "https://a-11-oy.com",
+  productBind: "https://a-11-oy.com/lyte",
   proof: "https://a11oy.net",
   source: "https://github.com/szl-holdings/lyte-lattice",
   flagship: "https://github.com/szl-holdings/a11oy",
