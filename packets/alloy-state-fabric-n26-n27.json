@@ -1,0 +1,45 @@
+{
+  "bind": "BIND_AS_A11OY_PACKAGE",
+  "lambda": "Conjecture 1",
+  "doctrine": "v11 LOCKED",
+  "order": "AO-2026-08-29-001",
+  "source": "szl-holdings/lyte-lattice",
+  "factory": "szl-holdings/a11oy-factory",
+  "plane": "alloy-state-fabric",
+  "signer": "UNSIGNED-honest",
+  "proven_trust": false,
+  "product_certified": false,
+  "product": "https://a-11-oy.com",
+  "never": ["a11oy.com"],
+  "hub_write": false,
+  "cells": [
+    {
+      "n": "N26",
+      "id": "wrap",
+      "title": "Inference",
+      "organ": "nervous",
+      "honesty": "REPORTED",
+      "admitted": false,
+      "inConsole": false,
+      "job": "wrapped inference joule",
+      "cite": "szl-command-lab GET /api/energy/inference NVML wrap on T4; Intel RAPL package wrap",
+      "szl": "Joule is REPORTED from the command-lab wrap, never MEASURED on this CPU hologram. Not a second meter. Compiler stays BLOCKED.",
+      "energy_j": null
+    },
+    {
+      "n": "N27",
+      "id": "train",
+      "title": "Train",
+      "organ": "brain",
+      "honesty": "UNAVAILABLE",
+      "admitted": false,
+      "inConsole": false,
+      "job": "receipted GPU train gate",
+      "cite": "szl-forge Unsloth QLoRA on owner metal; szl-gpu-bridge DSSE jobspecs; command-lab GET /api/train",
+      "szl": "NVML is a meter, not a trainer. This hologram has no CUDA runtime. WILLAY/KHIPU-R3/Waman stay NOT_APPROVED. gpu-bridge NEVER_DISPATCH. Not an Unsloth rehost.",
+      "trained": false,
+      "weights": null
+    }
+  ],
+  "note": "Named in origin. Not TS console routes. Not a production certificate of a-11-oy.com. Never a fabricated joule. Never a fabricated train."
+}
