@@ -8,7 +8,7 @@ app_port: 7860
 pinned: false
 license: apache-2.0
 suggested_hardware: cpu-basic
-short_description: BIND hologram. N1–N25 LIVE organs. Not a flagship.
+short_description: BIND hologram. N1–N25 LIVE. N26 REPORTED. N27 UNAVAILABLE. Not a flagship.
 tags:
   - governed-ai
   - a11oy
@@ -54,8 +54,9 @@ Cite the leader. Take the job. Do not rehost the code.
 
 N1–N25 in this console are **LIVE holograms**: TypeScript desks plus stdlib Python
 organs (`python -m lyte_lattice act`). They are not local GPU clusters, not a live
-broker, and not Hub-certified trainers. Energy **joule** stays UNAVAILABLE unless
-RAPL `energy_uj` is actually read — watts are never converted into joules.
+broker, and not Hub-certified trainers. N26 Inference is **REPORTED** (command-lab wrap;
+never a fabricated joule). N27 Train is **UNAVAILABLE** (no CUDA; gpu-bridge NEVER_DISPATCH).
+Energy **joule** stays UNAVAILABLE unless RAPL `energy_uj` is actually read — watts are never converted into joules.
 
 | Cell | Title | Cited job | Honesty |
 | --- | --- | --- | --- |
@@ -85,6 +86,8 @@ RAPL `energy_uj` is actually read — watts are never converted into joules.
 | N23 | Rails | NVIDIA NeMo Guardrails | LIVE hologram · not Llama Guard |
 | N24 | Browser | Playwright / Stagehand / Browserbase | LIVE hologram · plan only |
 | N25 | Policy | AWS Cedar / Open Policy Agent | LIVE hologram |
+| N26 | Inference | szl-command-lab NVML/RAPL wrap | REPORTED · never a fabricated joule · not in console |
+| N27 | Train | szl-forge Unsloth QLoRA; szl-gpu-bridge | UNAVAILABLE · NEVER_DISPATCH · not in console |
 
 Sigstore stays STRUCTURAL-ONLY (UNSIGNED-honest hash, not Cosign).
 Energy **joule** stays UNAVAILABLE unless RAPL reads. Λ stays Conjecture 1.

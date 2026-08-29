@@ -52,6 +52,8 @@ CELLS = [
     {"n": "N23", "title": "Rails", "honesty": "LIVE"},
     {"n": "N24", "title": "Browser", "honesty": "LIVE"},
     {"n": "N25", "title": "Policy", "honesty": "LIVE"},
+    {"n": "N26", "title": "Inference", "honesty": "REPORTED"},
+    {"n": "N27", "title": "Train", "honesty": "UNAVAILABLE"},
 ]
 
 

@@ -13,6 +13,7 @@ function honestyTone(h: string): "ok" | "warn" | "danger" | "muted" {
   if (h === "LIVE") return "ok";
   if (h === "STRUCTURAL-ONLY") return "warn";
   if (h === "UNAVAILABLE") return "danger";
+  if (h === "REPORTED") return "warn";
   return "muted";
 }
 
@@ -37,7 +38,7 @@ export function LyteView() {
             <div>
               <h2 className="text-sm font-medium">Bind map</h2>
               <p className="mt-1 text-xs text-muted">
-                Design-partner hub. N1–N25 run as Python organs in this hologram — tap a node to open it.
+                Design-partner hub. N1–N25 run as Python organs in this hologram — tap a node to open it. N26 is REPORTED. N27 is UNAVAILABLE.
               </p>
             </div>
             <OverlayLegend />

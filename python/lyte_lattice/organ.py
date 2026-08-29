@@ -249,6 +249,24 @@ CELLS: dict[str, dict[str, str]] = {
         "honesty": "LIVE",
         "module": "lyte_lattice.organs.n25_policy",
     },
+    "N26": {
+        "id": "wrap",
+        "title": "Inference",
+        "cited": "szl-command-lab NVML/RAPL wrap",
+        "job": "Wrapped inference joule. REPORTED from command-lab. Never MEASURED on this CPU hologram.",
+        "not": "Not a second meter. Never a fabricated joule. Compiler stays BLOCKED.",
+        "honesty": "REPORTED",
+        "module": "lyte_lattice.organs.n26_inference",
+    },
+    "N27": {
+        "id": "train",
+        "title": "Train",
+        "cited": "szl-forge Unsloth QLoRA; szl-gpu-bridge",
+        "job": "Receipted GPU train gate. CUDA absent. gpu-bridge NEVER_DISPATCH.",
+        "not": "Not Unsloth. Not a Hub-certified trainer. Never a fabricated train.",
+        "honesty": "UNAVAILABLE",
+        "module": "lyte_lattice.organs.n27_train",
+    },
 }
 
 ID_TO_N = {meta["id"]: n for n, meta in CELLS.items()}
@@ -412,6 +430,7 @@ def seal(
     body["receipt"]["proven_trust"] = False
     if n != "N13" or body["energy_joule"] is None:
         # Non-N13 never reports joules. N13 only reports what RAPL actually read.
+        # N26 wrap joule is REPORTED elsewhere, never minted here.
         if n != "N13":
             body["energy_joule"] = None
             body["energy_honesty"] = "UNAVAILABLE"
