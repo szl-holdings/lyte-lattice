@@ -1,24 +1,28 @@
-import { CELLS, type CellId } from "@/lib/cells";
+import { CELLS, INNER_RING, OUTER_RING, type CellId } from "@/lib/cells";
 import { useLyte } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
+function ring(ids: readonly CellId[], r: number, cx = 50, cy = 48, start = -Math.PI / 2): Record<string, { x: number; y: number }> {
+  const out: Record<string, { x: number; y: number }> = {};
+  const n = ids.length;
+  ids.forEach((id, i) => {
+    const a = start + (i / n) * Math.PI * 2;
+    out[id] = { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+  });
+  return out;
+}
+
+const INNER_POS = ring(INNER_RING, 22);
+const OUTER_POS = ring(OUTER_RING, 38, 50, 48, -Math.PI / 2 + Math.PI / 13);
+
 const POS: Record<CellId, { x: number; y: number }> = {
+  ...INNER_POS,
+  ...OUTER_POS,
   lyte: { x: 50, y: 48 },
-  serve: { x: 50, y: 16 },
-  graph: { x: 74, y: 28 },
-  guard: { x: 26, y: 28 },
-  mosaic: { x: 18, y: 52 },
-  retrieve: { x: 28, y: 74 },
-  schema: { x: 72, y: 74 },
-  cover: { x: 88, y: 52 },
-  quant: { x: 82, y: 18 },
-  observe: { x: 50, y: 84 },
-  tune: { x: 12, y: 18 },
-  lattice: { x: 62, y: 48 },
-};
+} as Record<CellId, { x: number; y: number }>;
 
 function nodePos(id: CellId) {
-  return POS[id];
+  return POS[id] ?? { x: 50, y: 48 };
 }
 
 export function LatticeMap({
@@ -35,6 +39,8 @@ export function LatticeMap({
 
   return (
     <svg viewBox="0 0 100 100" className="h-auto w-full" role="img" aria-label="LYTE cell lattice">
+      <circle cx={50} cy={48} r={22} fill="none" stroke="var(--color-border)" strokeWidth={0.2} />
+      <circle cx={50} cy={48} r={38} fill="none" stroke="var(--color-border)" strokeWidth={0.15} />
       {binds
         .filter((b) => b.enabled)
         .map((b) => {
@@ -56,16 +62,18 @@ export function LatticeMap({
               x2={c.x}
               y2={c.y}
               stroke={color}
-              strokeWidth={0.35}
-              strokeOpacity={0.55}
+              strokeWidth={0.28}
+              strokeOpacity={0.5}
             />
           );
         })}
-      <circle cx={50} cy={48} r={7.5} fill="none" stroke="var(--color-border-strong)" strokeWidth={0.3} />
+      <circle cx={50} cy={48} r={6.2} fill="none" stroke="var(--color-border-strong)" strokeWidth={0.3} />
       {CELLS.map((c) => {
         const p = nodePos(c.id);
         const iso = isolated.includes(c.id);
         const on = highlight === c.id || liveId === c.id;
+        const outer = OUTER_RING.includes(c.id);
+        const labelY = p.y >= 48 ? 4.6 : -3.6;
         return (
           <g
             key={c.id}
@@ -74,18 +82,18 @@ export function LatticeMap({
             onClick={() => onSelect?.(c.id)}
           >
             <circle
-              r={on ? 3.4 : 2.8}
+              r={c.id === "lyte" ? 3.6 : on ? 2.6 : outer ? 2.05 : 2.4}
               fill={iso ? "var(--color-danger)" : on ? "var(--color-accent)" : "var(--color-elevated)"}
               stroke={on ? "var(--color-fg)" : "var(--color-border-strong)"}
-              strokeWidth={0.35}
+              strokeWidth={0.32}
             />
             <text
-              y={5.8}
+              y={c.id === "lyte" ? 0.7 : labelY}
               textAnchor="middle"
               fill="var(--color-muted)"
-              style={{ fontSize: 2.4, fontFamily: "IBM Plex Sans, sans-serif" }}
+              style={{ fontSize: c.id === "lyte" ? 2.2 : outer ? 1.85 : 2.05, fontFamily: "IBM Plex Sans, sans-serif" }}
             >
-              {c.title}
+              {c.id === "lyte" ? "LYTE" : c.n}
             </text>
           </g>
         );

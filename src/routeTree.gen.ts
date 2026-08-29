@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CellRouteImport } from './routes/$cell'
+import { Route as ApiActRouteImport } from './routes/api/act'
 import { Route as ApiCompleteRouteImport } from './routes/api/complete'
 
 const IndexRoute = IndexRouteImport.update({
@@ -23,6 +24,11 @@ const CellRoute = CellRouteImport.update({
   path: '/$cell',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiActRoute = ApiActRouteImport.update({
+  id: '/api/act',
+  path: '/api/act',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiCompleteRoute = ApiCompleteRouteImport.update({
   id: '/api/complete',
   path: '/api/complete',
@@ -32,30 +38,34 @@ const ApiCompleteRoute = ApiCompleteRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$cell': typeof CellRoute
+  '/api/act': typeof ApiActRoute
   '/api/complete': typeof ApiCompleteRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$cell': typeof CellRoute
+  '/api/act': typeof ApiActRoute
   '/api/complete': typeof ApiCompleteRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$cell': typeof CellRoute
+  '/api/act': typeof ApiActRoute
   '/api/complete': typeof ApiCompleteRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/$cell' | '/api/complete'
+  fullPaths: '/' | '/$cell' | '/api/act' | '/api/complete'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/$cell' | '/api/complete'
-  id: '__root__' | '/' | '/$cell' | '/api/complete'
+  to: '/' | '/$cell' | '/api/act' | '/api/complete'
+  id: '__root__' | '/' | '/$cell' | '/api/act' | '/api/complete'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CellRoute: typeof CellRoute
+  ApiActRoute: typeof ApiActRoute
   ApiCompleteRoute: typeof ApiCompleteRoute
 }
 
@@ -75,6 +85,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CellRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/act': {
+      id: '/api/act'
+      path: '/api/act'
+      fullPath: '/api/act'
+      preLoaderRoute: typeof ApiActRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/complete': {
       id: '/api/complete'
       path: '/api/complete'
@@ -88,6 +105,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CellRoute: CellRoute,
+  ApiActRoute: ApiActRoute,
   ApiCompleteRoute: ApiCompleteRoute,
 }
 export const routeTree = rootRouteImport

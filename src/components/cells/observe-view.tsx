@@ -13,7 +13,7 @@ import { CellFrame } from "./cell-frame";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Panel, PanelHeader } from "@/components/ui/panel";
-import { CELL_IDS, CELL_MAP, type CellId } from "@/lib/cells";
+import { OPERATING_CELLS, type CellId } from "@/lib/cells";
 import { scanGuard } from "@/lib/engines/guard";
 import { useLyte } from "@/lib/store";
 import { fmtTime, pct, uid } from "@/lib/utils";
@@ -137,14 +137,14 @@ export function ObserveView() {
         <Button size="sm" variant={filter === "all" ? "primary" : "secondary"} onClick={() => setFilter("all")}>
           All
         </Button>
-        {CELL_IDS.map((id) => (
+        {OPERATING_CELLS.map((c) => (
           <Button
-            key={id}
+            key={c.id}
             size="sm"
-            variant={filter === id ? "primary" : "ghost"}
-            onClick={() => setFilter(id)}
+            variant={filter === c.id ? "primary" : "ghost"}
+            onClick={() => setFilter(c.id)}
           >
-            {CELL_MAP[id].title}
+            {c.n}
           </Button>
         ))}
         <Button className="sm:ml-auto" size="sm" onClick={runEval}>

@@ -1,21 +1,25 @@
 import type { ReactNode } from "react";
-import { CELL_MAP, type CellId } from "@/lib/cells";
+import { CELL_MAP, RICH_CELLS, type CellId } from "@/lib/cells";
 import { useLyte } from "@/lib/store";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { OrganStrip } from "./organ-strip";
 
 export function CellFrame({
   id,
   children,
+  kernel,
 }: {
   id: CellId;
   children: ReactNode;
+  kernel?: boolean;
 }) {
   const meta = CELL_MAP[id];
   const isolated = useLyte((s) => s.isolated.includes(id));
   const throttled = useLyte((s) => s.throttled.includes(id));
   const human = useLyte((s) => s.humanLock.includes(id));
   const toggle = useLyte((s) => s.toggleIsolate);
+  const showKernel = kernel ?? (id !== "lyte" && RICH_CELLS.includes(id));
 
   return (
     <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-5 px-4 py-5 sm:px-6 sm:py-7">
@@ -42,6 +46,7 @@ export function CellFrame({
           </Button>
         ) : null}
       </header>
+      {showKernel ? <OrganStrip id={id} /> : null}
       {children}
     </div>
   );

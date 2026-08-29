@@ -5,12 +5,13 @@ import { GuardView } from "@/components/cells/guard-view";
 import { LatticeView } from "@/components/cells/lattice-view";
 import { MosaicView } from "@/components/cells/mosaic-view";
 import { ObserveView } from "@/components/cells/observe-view";
+import { OrganDesk } from "@/components/cells/organ-desk";
 import { QuantView } from "@/components/cells/quant-view";
 import { RetrieveView } from "@/components/cells/retrieve-view";
 import { SchemaView } from "@/components/cells/schema-view";
 import { ServeView } from "@/components/cells/serve-view";
 import { TuneView } from "@/components/cells/tune-view";
-import { isCellId } from "@/lib/cells";
+import { isCellId, type CellId } from "@/lib/cells";
 
 export const Route = createFileRoute("/$cell")({
   beforeLoad: ({ params }) => {
@@ -21,7 +22,8 @@ export const Route = createFileRoute("/$cell")({
 
 function CellRoute() {
   const { cell } = Route.useParams();
-  switch (cell) {
+  const id = cell as CellId;
+  switch (id) {
     case "serve":
       return <ServeView />;
     case "graph":
@@ -45,6 +47,6 @@ function CellRoute() {
     case "schema":
       return <SchemaView />;
     default:
-      return null;
+      return <OrganDesk id={id} />;
   }
 }

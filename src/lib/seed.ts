@@ -212,6 +212,22 @@ export const SEED_BINDS: LatticeBind[] = [
   { id: "b9", from: "serve", to: "observe", overlay: "data", enabled: true },
   { id: "b10", from: "lattice", to: "cover", overlay: "yawar", enabled: true },
   { id: "b11", from: "lyte", to: "lattice", overlay: "control", enabled: true },
+  { id: "b12", from: "title", to: "cover", overlay: "data", enabled: true },
+  { id: "b13", from: "energy", to: "observe", overlay: "data", enabled: true },
+  { id: "b14", from: "tool", to: "graph", overlay: "control", enabled: true },
+  { id: "b15", from: "memory", to: "retrieve", overlay: "data", enabled: true },
+  { id: "b16", from: "eval", to: "observe", overlay: "data", enabled: true },
+  { id: "b17", from: "mesh", to: "serve", overlay: "control", enabled: true },
+  { id: "b18", from: "route", to: "serve", overlay: "control", enabled: true },
+  { id: "b19", from: "cache", to: "serve", overlay: "data", enabled: true },
+  { id: "b20", from: "voice", to: "serve", overlay: "control", enabled: true },
+  { id: "b21", from: "sandbox", to: "graph", overlay: "control", enabled: true },
+  { id: "b22", from: "identity", to: "lattice", overlay: "sentra", enabled: true },
+  { id: "b23", from: "rails", to: "lattice", overlay: "sentra", enabled: true },
+  { id: "b24", from: "browser", to: "graph", overlay: "control", enabled: true },
+  { id: "b25", from: "policy", to: "lattice", overlay: "control", enabled: true },
+  { id: "b26", from: "lattice", to: "rails", overlay: "yawar", enabled: true },
+  { id: "b27", from: "energy", to: "lattice", overlay: "sentra", enabled: true },
 ];
 
 export const SEED_RULES: LatticeRule[] = [

@@ -39,10 +39,14 @@ jobs:
           from huggingface_hub import HfApi, create_repo
           root = Path(".").resolve()
           staging = Path(tempfile.mkdtemp(prefix="lyte-lattice-space-"))
-          for name in ("Dockerfile", "server.py", "index.html", "README.md", "LICENSE"):
+          for name in ("Dockerfile", "server.py", "README.md", "LICENSE"):
               src = root / name
               if src.is_file():
                   shutil.copy2(src, staging / name)
+          space_src = root / "space" / "index.html"
+          if space_src.is_file():
+              (staging / "space").mkdir(parents=True, exist_ok=True)
+              shutil.copy2(space_src, staging / "space" / "index.html")
           api = HfApi(token=token)
           create_repo("SZLHOLDINGS/lyte-lattice", repo_type="space", space_sdk="docker", exist_ok=True, token=token)
           api.upload_folder(

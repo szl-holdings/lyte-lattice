@@ -386,7 +386,7 @@ export const useLyte = create<LyteState>()(
       boundAdapter: () => get().adapters.find((a) => a.bound),
     }),
     {
-      name: "lyte-lattice-v2",
+      name: "lyte-lattice-v3",
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
       partialize: (s) => ({

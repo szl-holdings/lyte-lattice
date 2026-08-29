@@ -37,7 +37,7 @@ export function LyteView() {
             <div>
               <h2 className="text-sm font-medium">Bind map</h2>
               <p className="mt-1 text-xs text-muted">
-                Design-partner hub. N1–N12 run in this hologram — tap a node to open it.
+                Design-partner hub. N1–N25 run as Python organs in this hologram — tap a node to open it.
               </p>
             </div>
             <OverlayLegend />
@@ -125,6 +125,7 @@ export function LyteView() {
                 <th className="py-2 font-medium">Cell</th>
                 <th className="py-2 font-medium">Cited job</th>
                 <th className="py-2 font-medium">Honesty</th>
+                <th className="py-2 font-medium">Note</th>
               </tr>
             </thead>
             <tbody>
@@ -137,6 +138,7 @@ export function LyteView() {
                   <td className="py-2">
                     <Badge tone={honestyTone(f.honesty)}>{f.honesty}</Badge>
                   </td>
+                  <td className="py-2 text-muted">{f.note ?? (f.inConsole ? "in console" : "")}</td>
                 </tr>
               ))}
             </tbody>

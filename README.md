@@ -8,7 +8,7 @@ app_port: 7860
 pinned: false
 license: apache-2.0
 suggested_hardware: cpu-basic
-short_description: BIND hologram. N1–N12 LIVE in-console. Not a flagship.
+short_description: BIND hologram. N1–N25 LIVE organs. Not a flagship.
 tags:
   - governed-ai
   - a11oy
@@ -52,8 +52,10 @@ door. Hub RUNNING only after Immune readback (`szl-holdings/immune`
 
 Cite the leader. Take the job. Do not rehost the code.
 
-N1–N12 in this console are **LIVE holograms**: in-browser engines plus Grok 4.5.
-They are not local GPU clusters, not a live broker, and not Hub-certified trainers.
+N1–N25 in this console are **LIVE holograms**: TypeScript desks plus stdlib Python
+organs (`python -m lyte_lattice act`). They are not local GPU clusters, not a live
+broker, and not Hub-certified trainers. Energy **joule** stays UNAVAILABLE unless
+RAPL `energy_uj` is actually read — watts are never converted into joules.
 
 | Cell | Title | Cited job | Honesty |
 | --- | --- | --- | --- |
@@ -65,16 +67,27 @@ They are not local GPU clusters, not a live broker, and not Hub-certified traine
 | N5 | Lattice | immune-lattice SENTRA / YAWAR overlay | LIVE hologram |
 | N6 | Cover | Guidewire P&C core | LIVE hologram |
 | N7 | Quant | QuantConnect LEAN backtest | LIVE hologram |
-| N8 | Title | Zillow / public records | ROADMAP |
+| N8 | Title | Zillow / public records | LIVE hologram · occupancy UNAVAILABLE · not MLS |
 | N9 | Retrieve | LlamaIndex / Haystack / Letta | LIVE hologram |
 | N10 | Observe | Phoenix / LangSmith / Langfuse / DeepEval | LIVE hologram |
 | N11 | Tune | Unsloth LoRA / QLoRA | LIVE hologram |
 | N12 | Schema | Outlines / Instructor constrained generation | LIVE hologram |
-| N13 | Energy | RAPL / NVML joule channel | UNAVAILABLE |
-| N14–N25 | Tool … Policy | named theatres | ROADMAP |
+| N13 | Energy | RAPL / NVML joule channel | LIVE probe · joule UNAVAILABLE unless RAPL reads |
+| N14 | Tool | Anthropic MCP | LIVE hologram |
+| N15 | Memory | Mem0 / Zep Graphiti | LIVE hologram |
+| N16 | Eval | RAGAS / HELM / LMSYS Arena | LIVE hologram |
+| N17 | Mesh | NVIDIA Dynamo / Ray Serve / llm-d | LIVE hologram · GPU UNAVAILABLE |
+| N18 | Route | LiteLLM / OpenRouter / RouteLLM | LIVE hologram |
+| N19 | Cache | LMCache / Mooncake / GPTCache | LIVE hologram |
+| N20 | Voice | LiveKit / Cartesia / Deepgram | LIVE hologram · no audio bytes |
+| N21 | Sandbox | Daytona / E2B | LIVE hologram · AST whitelist |
+| N22 | Identity | SPIFFE / SPIRE / Astrix NHI | LIVE hologram · unsigned |
+| N23 | Rails | NVIDIA NeMo Guardrails | LIVE hologram · not Llama Guard |
+| N24 | Browser | Playwright / Stagehand / Browserbase | LIVE hologram · plan only |
+| N25 | Policy | AWS Cedar / Open Policy Agent | LIVE hologram |
 
 Sigstore stays STRUCTURAL-ONLY (UNSIGNED-honest hash, not Cosign).
-Energy stays UNAVAILABLE. Λ stays Conjecture 1.
+Energy **joule** stays UNAVAILABLE unless RAPL reads. Λ stays Conjecture 1.
 
 ## Owner order
 
