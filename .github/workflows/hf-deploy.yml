@@ -35,6 +35,7 @@ jobs:
           token = os.environ.get("HF_TOKEN") or ""
           if not token:
               print("HF_TOKEN UNAVAILABLE — Space publish skipped. GitHub remains the source. Not fabricated LIVE.")
+              print("::warning::HF_TOKEN unset — this workflow performed NO Hub upload. Hub writes for this surface go through Immune. Green here does not mean the Hub was updated.")
               sys.exit(0)
           from huggingface_hub import HfApi, create_repo
           root = Path(".").resolve()
