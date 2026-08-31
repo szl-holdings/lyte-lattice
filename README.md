@@ -34,8 +34,9 @@ BIND hologram console for the A11oy named frontiers. **BIND_AS_A11OY_PACKAGE.**
 Not a second flagship. Not a production certificate of [a-11-oy.com](https://a-11-oy.com).
 
 GitHub is canonical source. Hugging Face is the artifact registry, not the front
-door. Hub RUNNING only after Immune readback (`szl-holdings/immune`
-`secrets.HF_TOKEN`).
+door. The protected main workflow publishes through an exact-commit reusable
+deployer. Hub RUNNING is claimed only after exact commit, byte, runtime, and
+route readback.
 
 | Surface | State |
 | --- | --- |
@@ -98,7 +99,7 @@ Energy **joule** stays UNAVAILABLE unless RAPL reads. Λ stays Conjecture 1.
 
 - This console binds as an A11oy package
 - Production certificate of a-11-oy.com remains closed
-- Hub writes go through Immune (`szl-holdings/immune` `secrets.HF_TOKEN`)
+- Hub writes run only from protected `main` with a bound GitHub secret and exact post-deploy attestation
 
 ## Run
 
