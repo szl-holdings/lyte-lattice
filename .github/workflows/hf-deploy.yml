@@ -1,60 +1,61 @@
 # Copyright 2026 SZL Holdings — SPDX-License-Identifier: Apache-2.0
-# Hub writes go through Immune. This workflow no-ops without HF_TOKEN.
-# RUNNING only after Hub readback. Do not fabricate LIVE.
-name: Deploy to HuggingFace Space
+name: Hugging Face publication pipeline
 
+# Pull requests run protected, no-secret workflow validation only. A push to main
+# or an explicit dispatch performs the real publication and cannot report green
+# unless the exact Hub commit, deployed bytes, runtime state, and smoke route
+# are attested by the protected reusable publisher.
 on:
   push:
     branches: [main]
+    paths:
+      - .github/workflows/hf-deploy.yml
+      - .dockerignore
+      - Dockerfile
+      - Dockerfile.dockerignore
+      - server.py
+      - space/index.html
+      - README.md
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/hf-deploy.yml
+      - .dockerignore
+      - Dockerfile
+      - Dockerfile.dockerignore
+      - server.py
+      - space/index.html
+      - README.md
   workflow_dispatch: {}
 
 permissions:
   contents: read
 
 concurrency:
-  group: hf-deploy-${{ github.ref }}
+  group: hf-deploy-${{ github.repository }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
+  validate:
+    name: Validate publisher caller (no provider write)
+    if: github.event_name == 'pull_request'
+    uses: szl-holdings/.github/.github/workflows/reusable-workflow-lint.yml@c889276e51e7d954c4bba8b216f86fc7577721fa
+    with:
+      fail-on-zizmor-warning: false
+
   deploy:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.12"
-      - run: pip install huggingface_hub
-      - name: Publish hologram Space SZLHOLDINGS/lyte-lattice
-        env:
-          HF_TOKEN: ${{ secrets.HF_ORG_TOKEN || secrets.HF_TOKEN }}
-        run: |
-          python - <<'PY'
-          import os, sys, shutil, tempfile
-          from pathlib import Path
-          token = os.environ.get("HF_TOKEN") or ""
-          if not token:
-              print("HF_TOKEN UNAVAILABLE — Space publish skipped. GitHub remains the source. Not fabricated LIVE.")
-              print("::warning::HF_TOKEN unset — this workflow performed NO Hub upload. Hub writes for this surface go through Immune. Green here does not mean the Hub was updated.")
-              sys.exit(0)
-          from huggingface_hub import HfApi, create_repo
-          root = Path(".").resolve()
-          staging = Path(tempfile.mkdtemp(prefix="lyte-lattice-space-"))
-          for name in ("Dockerfile", "server.py", "README.md", "LICENSE"):
-              src = root / name
-              if src.is_file():
-                  shutil.copy2(src, staging / name)
-          space_src = root / "space" / "index.html"
-          if space_src.is_file():
-              (staging / "space").mkdir(parents=True, exist_ok=True)
-              shutil.copy2(space_src, staging / "space" / "index.html")
-          api = HfApi(token=token)
-          create_repo("SZLHOLDINGS/lyte-lattice", repo_type="space", space_sdk="docker", exist_ok=True, token=token)
-          api.upload_folder(
-              folder_path=str(staging),
-              repo_id="SZLHOLDINGS/lyte-lattice",
-              repo_type="space",
-              commit_message="lyte-lattice hologram — BIND_AS_A11OY_PACKAGE, not flagship",
-          )
-          print("published hologram SZLHOLDINGS/lyte-lattice")
-          PY
+    name: Publish exact source and attest live state
+    if: github.event_name != 'pull_request'
+    uses: szl-holdings/.github/.github/workflows/reusable-hf-deploy.yml@c889276e51e7d954c4bba8b216f86fc7577721fa
+    with:
+      hf-repo: SZLHOLDINGS/lyte-lattice
+      ref: ${{ github.sha }}
+      dockerfile-path: Dockerfile
+      include-readme: true
+      prune: true
+      require-default-branch-tip: true
+      restart-space: true
+      wait-running: 1200
+      smoke-paths: '["/"]'
+    secrets:
+      HF_TOKEN: ${{ secrets.HF_ORG_TOKEN || secrets.HF_TOKEN }}
