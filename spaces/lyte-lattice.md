@@ -16,9 +16,9 @@ short_description: BIND hologram. N1–N25 LIVE organs. Not a flagship.
 BIND hologram for [szl-holdings/lyte-lattice](https://github.com/szl-holdings/lyte-lattice)
 @ `2773eba`. Product bind: [a-11-oy.com/lyte](https://a-11-oy.com/lyte).
 
-Immune copies `Dockerfile`, `server.py`, `index.html`, `README.md`, `LICENSE`
-to the Space root. **RUNNING only after Hub readback.** This card does not
-write the Hub.
+The protected repository workflow derives the Space payload from `Dockerfile`
+and includes the canonical `README.md`. **RUNNING only after exact commit,
+byte, runtime, and route readback.** This card itself does not write the Hub.
 
 - Lyte: STRUCTURAL-ONLY admitted
 - N1–N25: LIVE hologram (TypeScript desks + stdlib Python organs)
