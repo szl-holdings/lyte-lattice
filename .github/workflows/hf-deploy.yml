@@ -8,14 +8,6 @@ name: Hugging Face publication pipeline
 on:
   push:
     branches: [main]
-    paths:
-      - .github/workflows/hf-deploy.yml
-      - .dockerignore
-      - Dockerfile
-      - Dockerfile.dockerignore
-      - server.py
-      - space/index.html
-      - README.md
   pull_request:
     branches: [main]
     paths:
