@@ -10,6 +10,7 @@ This package is a BIND hologram console. It is not the flagship and not an ATO.
 - Lyte stays STRUCTURAL-ONLY.
 - Do not treat advisory Λ scores as a security boundary. HARD_DENY is the
   security boundary; Λ is Conjecture 1 OPEN.
-- Hub writes go through Immune. Do not paste `HF_TOKEN` into this repository.
+- Hub writes run only from protected `main` through a bound GitHub secret.
+  Do not paste `HF_TOKEN` into this repository.
 
 Apache-2.0. Copyright 2026 SZL Holdings.

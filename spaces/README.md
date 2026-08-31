@@ -1,8 +1,9 @@
 # Hugging Face Space configuration
 
-These cards are the Space Release Compiler output. They do **not** publish
-to Hub from this repository. Publishing is Immune's job
-(`szl-holdings/immune` workflow, `secrets.HF_TOKEN`).
+These cards are the Space Release Compiler output. The protected repository
+workflow publishes the Dockerfile-derived payload through an exact-commit org
+deployer. Credentials remain GitHub secrets; contributors do not paste tokens
+into source.
 
 | Space | Visibility | Honesty |
 | --- | --- | --- |
