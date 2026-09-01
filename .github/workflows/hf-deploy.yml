@@ -60,6 +60,41 @@ jobs:
         with:
           python-version: "3.12.10"
 
+      - name: Validate Hugging Face card metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -I -P <<'PY'
+          from pathlib import Path
+
+          readme = Path('source/README.md')
+          if not readme.is_file():
+              raise SystemExit('README.md is missing')
+          text = readme.read_text(encoding='utf-8')
+          if not text.startswith('---\n'):
+              raise SystemExit('README.md must start with Hugging Face YAML metadata')
+          end = text.find('\n---\n', 4)
+          if end < 0:
+              raise SystemExit('README.md metadata closing delimiter is missing')
+          values = []
+          for line in text[4:end].splitlines():
+              if line.startswith('short_description:'):
+                  values.append(line.split(':', 1)[1].strip())
+          if len(values) != 1:
+              raise SystemExit('README.md must define exactly one short_description')
+          description = values[0]
+          if not description:
+              raise SystemExit('short_description must not be empty')
+          if len(description) > 60:
+              raise SystemExit(
+                  f'short_description is {len(description)} characters; maximum is 60'
+              )
+          print(
+              f'Hugging Face card metadata: PASS '
+              f'(short_description={len(description)} chars)'
+          )
+          PY
+
       - name: Prove delegation and emit receipt
         shell: bash
         env:
