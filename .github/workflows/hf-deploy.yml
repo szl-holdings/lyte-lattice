@@ -82,16 +82,28 @@ jobs:
                   values.append(line.split(':', 1)[1].strip())
           if len(values) != 1:
               raise SystemExit('README.md must define exactly one short_description')
-          description = values[0]
-          if not description:
+          raw_description = values[0]
+          if not raw_description:
               raise SystemExit('short_description must not be empty')
+          quoted = (
+              len(raw_description) >= 2
+              and raw_description[0] in {'"', "'"}
+              and raw_description[-1] == raw_description[0]
+          )
+          if ':' in raw_description and not quoted:
+              raise SystemExit(
+                  'colon-bearing short_description must be quoted as a YAML scalar'
+              )
+          description = raw_description[1:-1] if quoted else raw_description
+          if not description:
+              raise SystemExit('short_description must not be empty after unquoting')
           if len(description) > 60:
               raise SystemExit(
                   f'short_description is {len(description)} characters; maximum is 60'
               )
           print(
               f'Hugging Face card metadata: PASS '
-              f'(short_description={len(description)} chars)'
+              f'(short_description={len(description)} chars; quoted={quoted})'
           )
           PY
 
