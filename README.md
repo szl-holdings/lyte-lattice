@@ -8,7 +8,7 @@ app_port: 7860
 pinned: false
 license: apache-2.0
 suggested_hardware: cpu-basic
-short_description: BIND hologram. N1–N25 LIVE. N26 REPORTED. N27 UNAVAILABLE. Not a flagship.
+short_description: BIND hologram: N1-N25 LIVE; N26 REPORTED; N27 UNAVAILABLE.
 tags:
   - governed-ai
   - a11oy
@@ -34,9 +34,9 @@ BIND hologram console for the A11oy named frontiers. **BIND_AS_A11OY_PACKAGE.**
 Not a second flagship. Not a production certificate of [a-11-oy.com](https://a-11-oy.com).
 
 GitHub is canonical source. Hugging Face is the artifact registry, not the front
-door. The protected main workflow publishes through an exact-commit reusable
-deployer. Hub RUNNING is claimed only after exact commit, byte, runtime, and
-route readback.
+door. The protected central publisher reads this repository's exact `main` tip,
+publishes its Dockerfile-derived closure, restarts the Space, and verifies exact
+commit, bytes, runtime state, and smoke routes before claiming RUNNING.
 
 | Surface | State |
 | --- | --- |
@@ -99,7 +99,7 @@ Energy **joule** stays UNAVAILABLE unless RAPL reads. Λ stays Conjecture 1.
 
 - This console binds as an A11oy package
 - Production certificate of a-11-oy.com remains closed
-- Hub writes run only from protected `main` with a bound GitHub secret and exact post-deploy attestation
+- Hub writes run only from the protected central publisher with a bound repository secret and exact post-deploy attestation
 
 ## Run
 
