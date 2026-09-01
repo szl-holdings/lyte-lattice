@@ -8,6 +8,8 @@ import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from szl_space_brain import anatomy, substrate_status
+
 PORT = int(os.environ.get("PORT", "7860"))
 ROOT = Path(__file__).resolve().parent
 INDEX = ROOT / "index.html"
@@ -74,24 +76,35 @@ class Handler(BaseHTTPRequestHandler):
         self.do_GET()
 
     def do_GET(self) -> None:
-        if self.path in ("/", "/index.html"):
+        path = self.path.split("?", 1)[0].rstrip("/") or "/"
+        if path in ("/", "/index.html"):
             html = INDEX.read_bytes() if INDEX.is_file() else b"LYTE lattice BIND hologram\n"
             self._send(200, html, "text/html; charset=utf-8")
             return
-        if self.path == "/healthz":
+        if path == "/healthz":
+            brain = substrate_status()
             payload = {
-                "ok": True,
+                "ok": not brain["missing"],
                 "bind": ESTATE["bind"],
                 "energy": "UNAVAILABLE",
                 "proven_trust": False,
                 "product_certified": False,
+                "second_brain": "LIVE" if not brain["missing"] else "DEGRADED",
+                "locked_proven_count": brain["locked_proven_count"],
+                "lambda": "Conjecture 1 OPEN",
             }
             self._send(200, json.dumps(payload).encode(), "application/json")
             return
-        if self.path == "/api/estate":
+        if path == "/api/second-brain":
+            self._send(200, json.dumps(anatomy("lyte-lattice"), indent=2).encode(), "application/json")
+            return
+        if path == "/api/formulas":
+            self._send(200, json.dumps(substrate_status(), indent=2).encode(), "application/json")
+            return
+        if path == "/api/estate":
             self._send(200, json.dumps(ESTATE).encode(), "application/json")
             return
-        if self.path == "/api/cells":
+        if path == "/api/cells":
             self._send(200, json.dumps(CELLS).encode(), "application/json")
             return
         self._send(404, b'{"error":"not found"}\n', "application/json")
@@ -99,7 +112,7 @@ class Handler(BaseHTTPRequestHandler):
 
 def main() -> None:
     httpd = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
-    print(f"lyte-lattice hologram on 0.0.0.0:{PORT}")
+    print(f"lyte-lattice hologram + second-brain runtime on 0.0.0.0:{PORT}")
     httpd.serve_forever()
 
 
