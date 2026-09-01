@@ -8,7 +8,7 @@ app_port: 7860
 pinned: false
 license: apache-2.0
 suggested_hardware: cpu-basic
-short_description: BIND hologram: N1-N25 LIVE; N26 REPORTED; N27 UNAVAILABLE.
+short_description: "BIND hologram: N1-N25 LIVE; N26 REPORTED; N27 UNAVAILABLE."
 tags:
   - governed-ai
   - a11oy
