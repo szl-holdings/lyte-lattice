@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-szl-holo-space-v2="lyte-lattice">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -34,6 +34,7 @@
     footer { padding: 24px; color: var(--subtle); font-family: ui-monospace, monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; border-top: 1px solid var(--border); }
     .pins { display: flex; flex-wrap: wrap; gap: 12px 20px; font-size: 13px; color: var(--muted); margin-top: 16px; }
   </style>
+  <link rel="stylesheet" href="./szl-holo-v2.css" data-szl-holo-space-asset="style-v2" />
 </head>
 <body>
   <header>
@@ -92,5 +93,6 @@
       `<tr><td>${n} ${t}</td><td>${c}</td><td><span class="badge ${k}">${h}</span></td></tr>`
     ).join("");
   </script>
+  <script src="./szl-holo-v2.js" defer data-szl-holo-space-asset="script-v2"></script>
 </body>
 </html>
