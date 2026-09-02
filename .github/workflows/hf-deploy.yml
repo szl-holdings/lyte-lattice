@@ -112,7 +112,7 @@ jobs:
         env:
           EXPECTED_REPO: lyte-lattice
           EXPECTED_HF_REPO: SZLHOLDINGS/lyte-lattice
-          EXPECTED_SMOKE_PATHS: '["/"]'
+          EXPECTED_SMOKE_PATHS: '["/","/healthz","/api/second-brain","/api/formulas"]'
           SOURCE_WORKFLOW: .github/workflows/hf-deploy.yml
         run: |
           set -euo pipefail
