@@ -1,0 +1,60 @@
+{
+  "controller_run": "33693825596",
+  "host_stylesheet": "space/szl-holo-v2.css",
+  "requirements": {
+    "external_runtime_dependencies": 0,
+    "forced_colors": true,
+    "horizontal_overflow_px": 0,
+    "increased_contrast": true,
+    "keyboard_focus_visible": true,
+    "minimum_touch_target_coarse_px": 48,
+    "minimum_touch_target_px": 44,
+    "print_mode": true,
+    "reduced_motion": true,
+    "safe_area_aware": true
+  },
+  "responsive_stylesheet": "space/szl-responsive-v3.css",
+  "schema": "szl.space-responsive-experience/v3",
+  "source_repository": "szl-holdings/lyte-lattice",
+  "spaces": [
+    "SZLHOLDINGS/lyte"
+  ],
+  "viewports": [
+    [
+      320,
+      568
+    ],
+    [
+      375,
+      812
+    ],
+    [
+      430,
+      932
+    ],
+    [
+      812,
+      375
+    ],
+    [
+      768,
+      1024
+    ],
+    [
+      1440,
+      900
+    ],
+    [
+      1920,
+      1080
+    ],
+    [
+      2560,
+      1440
+    ],
+    [
+      3440,
+      1440
+    ]
+  ]
+}
