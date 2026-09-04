@@ -11,6 +11,7 @@
   "hub_write": false,
   "executed": true,
   "wave": "W1",
+  "name": "Core path",
   "ok": true,
   "admitted": 9,
   "blocked": 0,
