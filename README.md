@@ -55,8 +55,8 @@ Cite the leader. Take the job. Do not rehost the code.
 
 N1–N25 in this console are **LIVE holograms**: TypeScript desks plus stdlib Python
 organs (`python -m lyte_lattice act`). They are not local GPU clusters, not a live
-broker, and not Hub-certified trainers. N26 Inference is **REPORTED** (command-lab wrap;
-never a fabricated joule). N27 Train is **UNAVAILABLE** (no CUDA; gpu-bridge NEVER_DISPATCH).
+broker, and not Hub-certified trainers. N26 Inference is **REPORTED** (command-lab wrap; never a fabricated joule) and is named in the Alloy State Fabric console.
+N27 Train is **UNAVAILABLE** (no CUDA; gpu-bridge NEVER_DISPATCH); local 16-32-8-3 SGD is MEASURED on that plane.
 Energy **joule** stays UNAVAILABLE unless RAPL `energy_uj` is actually read — watts are never converted into joules.
 
 | Cell | Title | Cited job | Honesty |
@@ -87,8 +87,8 @@ Energy **joule** stays UNAVAILABLE unless RAPL `energy_uj` is actually read — 
 | N23 | Rails | NVIDIA NeMo Guardrails | LIVE hologram · not Llama Guard |
 | N24 | Browser | Playwright / Stagehand / Browserbase | LIVE hologram · plan only |
 | N25 | Policy | AWS Cedar / Open Policy Agent | LIVE hologram |
-| N26 | Inference | szl-command-lab NVML/RAPL wrap | REPORTED · never a fabricated joule · not in console |
-| N27 | Train | szl-forge Unsloth QLoRA; szl-gpu-bridge | UNAVAILABLE · NEVER_DISPATCH · not in console |
+| N26 | Inference | szl-command-lab NVML/RAPL wrap | REPORTED · never a fabricated joule · in Alloy State Fabric console |
+| N27 | Train | szl-forge Unsloth QLoRA; szl-gpu-bridge | UNAVAILABLE · NEVER_DISPATCH · in Alloy State Fabric console · local SGD MEASURED |
 
 Sigstore stays STRUCTURAL-ONLY (UNSIGNED-honest hash, not Cosign).
 Energy **joule** stays UNAVAILABLE unless RAPL reads. Λ stays Conjecture 1.
