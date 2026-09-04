@@ -1,0 +1,63 @@
+{
+  "bind": "BIND_AS_A11OY_PACKAGE",
+  "lambda": "Conjecture 1",
+  "doctrine": "v11 LOCKED",
+  "signer": "UNSIGNED-honest",
+  "proven_trust": false,
+  "product_certified": false,
+  "hub_write": false,
+  "measured_at": "2026-09-04T20:18:00Z",
+  "github_org": {
+    "name": "szl-holdings",
+    "open_prs_orgwide": 0,
+    "a11oy_open_issues": 17,
+    "github_profile_open_issues": 14,
+    "szl_hf_frontier_open_issues": 4,
+    "szl_forge_open_issues": 13,
+    "note": "Merge queue empty. Work is issues, not open PRs."
+  },
+  "codex": {
+    "controller": "szl-holdings/szl-ouroboros",
+    "loop_workflow": {
+      "name": "Codex continuous frontier loop",
+      "latest": "success",
+      "url": "https://github.com/szl-holdings/szl-ouroboros/actions/runs/33907827805"
+    },
+    "review_workflow": {
+      "name": "Ouroboros Codex frontier review",
+      "latest": "failure",
+      "url": "https://github.com/szl-holdings/szl-ouroboros/actions/runs/33908035700",
+      "failed_step": "Prepare the fixed-source, digest-bound prompt input",
+      "honesty": "CODEX_REVIEW_STALLED. Not a product outage. Review-only. No merge authority."
+    },
+    "payload_done": "szl-holdings/szl-hf-frontier ops Codex payload C1/C2/C5"
+  },
+  "perplexity": {
+    "brief": "finished on a11oy + a11oy-net 2026-09-04 14:57 EDT",
+    "other_desks": "https://github.com/szl-holdings/holographic-unify/blob/main/OTHER-DESKS.md",
+    "hub_write": "UNAVAILABLE from Perplexity. No first-party HF connector."
+  },
+  "huggingface": {
+    "org": "https://huggingface.co/SZLHOLDINGS",
+    "org_page": "LIVE",
+    "command_center": "https://huggingface.co/spaces/SZLHOLDINGS/a11oy LIVE listing",
+    "lyte_lattice_space": "UNAVAILABLE 401",
+    "write_from_this_plane": false
+  },
+  "this_plane_finished": [
+    "W1 W2 W3 origin acts",
+    "packets on lyte-lattice",
+    "a11oy /lyte status pin 9db7f25 N1-N27 waves",
+    "GROK-TERMINAL-FINISH payload"
+  ],
+  "still_open_not_closed_here": [
+    "a11oy#1764 make every Space public — estate:blocked-external",
+    "a11oy#1836 flagship Space monorepo allowlist — blocked-external",
+    "a11oy#1282 HF ecosystem drift",
+    "a11oy#541 alert channel OFF",
+    "szl-hf-frontier#1 C1-C6 lanes",
+    "szl-forge#124 Codex full-estate ticket — GPU/eval work",
+    ".github#158 CI Health Digest"
+  ],
+  "note": "This packet does not close P0 issues without evidence. Hub writes stay off. Codex review remains failed at prompt prep. Perplexity brief already finished."
+}
