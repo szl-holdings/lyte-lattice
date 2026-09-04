@@ -1,0 +1,16 @@
+{
+  "bind": "BIND_AS_A11OY_PACKAGE",
+  "lambda": "Conjecture 1",
+  "doctrine": "v11 LOCKED",
+  "product_tab": "https://a-11-oy.com/lyte",
+  "command_center": "https://huggingface.co/spaces/SZLHOLDINGS/a11oy",
+  "source": "https://github.com/szl-holdings/lyte-lattice",
+  "source_sha": "9db7f25c99f22faf0806ea9bdc2773f54a06dbbd",
+  "a11oy_commit": "25b339517879b7c5ac9b15ffa275fc3c95a40a16",
+  "hub_space": "https://huggingface.co/spaces/SZLHOLDINGS/lyte-lattice",
+  "hub_running": false,
+  "product_certified": false,
+  "signer": "UNSIGNED-honest",
+  "waves": ["W1", "W2", "W3"],
+  "note": "Tab already exists at /lyte. Status module now cites N1-N27 and W1-W3. Public page updates after a11oy Space rebuild. Hub Space twin stays UNAVAILABLE until Immune readback."
+}
