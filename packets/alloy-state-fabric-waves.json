@@ -1,0 +1,60 @@
+{
+  "bind": "BIND_AS_A11OY_PACKAGE",
+  "lambda": "Conjecture 1",
+  "doctrine": "v11 LOCKED",
+  "order": "AO-2026-08-29-001",
+  "source": "szl-holdings/lyte-lattice",
+  "plane": "alloy-state-fabric",
+  "signer": "UNSIGNED-honest",
+  "proven_trust": false,
+  "product_certified": false,
+  "hub_write": false,
+  "executed": true,
+  "waves": ["W1", "W2", "W3"],
+  "ok": true,
+  "admitted": 26,
+  "blocked": 1,
+  "W1": {
+    "wave": "W1", "admitted": 9, "blocked": 0, "ok": true,
+    "cells": [
+      {"n":"N1","id":"serve","title":"Serve","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:01275e50bed3d5e8fa9c2d3b49e61e743f90502ba2fc62b0dcefeaa6e1e5d378"},
+      {"n":"N2","id":"graph","title":"Graph","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:42af13540516d0ba0529653829db3bbb7db91c0ae70690729d8756be64570feb"},
+      {"n":"N3","id":"guard","title":"Guard","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:254214fc09a22a111afa00667bd69266318b7563e40e5c657f0ae8745ceddad0"},
+      {"n":"N4","id":"mosaic","title":"Mosaic","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:538958349c71d5cfb5289c64655af2abb392fdb671344ff920a3ed86e5afcc63"},
+      {"n":"N5","id":"lattice","title":"Lattice","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:808b8f210e152613a65c664b8216b3e4b591ecb252f0d62e9ee9c68f520e38d6"},
+      {"n":"N6","id":"cover","title":"Cover","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:217f99262e906a9834415a0701b804932c90ad5e3ffb2d302349b18ab00569c6"},
+      {"n":"N7","id":"quant","title":"Quant","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:08bfd93522f7f10925b392020189d04e6e7097ed032103679f0059c2fae42447"},
+      {"n":"N8","id":"title","title":"Title","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:27937e7da7b28afa55396964bf9f48b00a25eb0b894cd10000c64b56375023bd"},
+      {"n":"N9","id":"retrieve","title":"Retrieve","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:8a34d89d1c7dfa3503a3fcec969455e22347f5d490e1273449934f03bb898d01"}
+    ]
+  },
+  "W2": {
+    "wave": "W2", "admitted": 9, "blocked": 0, "ok": true,
+    "cells": [
+      {"n":"N10","id":"observe","title":"Observe","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:9502f55adfb70d3c8e42ce01abd820ce01bea17f05a8d19813958105d8924568"},
+      {"n":"N11","id":"tune","title":"Tune","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:0d70eaa11ef000d48205f6b767d07b821de997bfa3d634eb91065967f976dfba"},
+      {"n":"N12","id":"schema","title":"Schema","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:1b73fff9ca16770da7f6772374afdfaf1c4358f10b999775c6195f548bd0189b"},
+      {"n":"N13","id":"energy","title":"Energy","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:53eee89e1a0b27d92f61c97bd5f9d5d75d51904c8f4eb418b1aa072d93606a37"},
+      {"n":"N14","id":"tool","title":"Tool","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:c8f5b4d5c3adb50145edb24f57035e66f63774b9a2a79c899d7ba56eec8908aa"},
+      {"n":"N15","id":"memory","title":"Memory","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:d5ef12b1e2c6a311455b9ed4784964e99d724754cab259357b17885a073537f6"},
+      {"n":"N16","id":"eval","title":"Eval","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:fefcac7ff3950a9f611257d2596d92f86debaf8ba53dca60afd25abc5321c11c"},
+      {"n":"N17","id":"mesh","title":"Mesh","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:4001abfb51f077532cb5d773b61387e31090085209951ffa35bc7e77c7127c05"},
+      {"n":"N18","id":"route","title":"Route","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:e1ddc067624d86655f8ed29efbe94cfc5d922f530abfc7e5bf54bdc33df3aa68"}
+    ]
+  },
+  "W3": {
+    "wave": "W3", "admitted": 8, "blocked": 1, "ok": true,
+    "cells": [
+      {"n":"N19","id":"cache","title":"Cache","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:0639231d6129b9eb1c5feb5265f928e4ffa3f0fe5afd004379695ebe59277df9"},
+      {"n":"N20","id":"voice","title":"Voice","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:82044a614d697539896dbca0deccd2c23e4e69b563c56eaa28df0edf3ec15c23"},
+      {"n":"N21","id":"sandbox","title":"Sandbox","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:3d3c61ec691edca818ca4066c99b46218c2a36c6ff75eb1f1a16409508408892"},
+      {"n":"N22","id":"identity","title":"Identity","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:64dca6a893b717cc6a8ad586f19af93b2559dec8a9b6af45129de384de9834d6"},
+      {"n":"N23","id":"rails","title":"Rails","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:c6aeaeed69026728a4eca7bd0c795307d0c25c4f6782a78c7a4293d8ef48cc14"},
+      {"n":"N24","id":"browser","title":"Browser","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:fa1a3de3511651d2bfd3ec05050a80b8b8c21fb72699ab28fd407fc1c7854091"},
+      {"n":"N25","id":"policy","title":"Policy","status":"ok","honesty":"LIVE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:f8dcdefd8cf77218124ae4209370ab3d62fefc4dc50112faebac51009acb5743"},
+      {"n":"N26","id":"wrap","title":"Inference","status":"ok","honesty":"REPORTED","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:d901be0b4c4212c6e5d615e0044709cd1e015466be6db6df8eed341d5679b7d6"},
+      {"n":"N27","id":"train","title":"Train","status":"blocked","honesty":"UNAVAILABLE","energy_honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:b3477ff6eb2b71d5f8af9bed58d4970e5d275ada480d2dbfd936e6e48b16b330"}
+    ]
+  },
+  "note": "All three waves acted on origin lyte-lattice. W1 N1-N9, W2 N10-N18, W3 N19-N27. N26 wrap joule REPORTED null. N27 GPU train blocked UNAVAILABLE. Never a fabricated joule or train."
+}
