@@ -1,0 +1,19 @@
+{
+  "bind": "BIND_AS_A11OY_PACKAGE",
+  "lambda": "Conjecture 1",
+  "signer": "UNSIGNED-honest",
+  "certified": false,
+  "proven_trust": false,
+  "hub_write": false,
+  "measured": {
+    "https://a-11-oy.com/unify": 200,
+    "https://a-11-oy.com/api/a11oy/v1/unify/status": 200,
+    "https://a-11-oy.com/lyte": 200,
+    "https://a-11-oy.com/spaces": 200
+  },
+  "state": "BIND",
+  "keep": ["a11oy", "killinchu", "immune", "lyte", "vertical-services"],
+  "policy": "pause+private, never delete",
+  "source_sha_cited": "9db7f25c99f22faf0806ea9bdc2773f54a06dbbd",
+  "note": "Product door live. Not certified. Not a new Hub Space."
+}
