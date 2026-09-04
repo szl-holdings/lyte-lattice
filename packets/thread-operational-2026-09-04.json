@@ -1,0 +1,30 @@
+{
+  "bind": "BIND_AS_A11OY_PACKAGE",
+  "lambda": "Conjecture 1",
+  "doctrine": "v11 LOCKED",
+  "signer": "UNSIGNED-honest",
+  "proven_trust": false,
+  "product_certified": false,
+  "hub_write": false,
+  "placement": {
+    "source": "szl-holdings/lyte-lattice",
+    "flagship_repo": "szl-holdings/a11oy",
+    "product": "https://a-11-oy.com",
+    "tabs": ["/lyte", "/spaces", "/unify"],
+    "proof": "https://a11oy.net",
+    "proof_role": "RECORD pointer only",
+    "do_not_create": "SZLHOLDINGS/unify"
+  },
+  "sealed_waves": {
+    "W1": {"admitted": 9, "blocked": 0},
+    "W2": {"admitted": 9, "blocked": 0},
+    "W3": {"admitted": 8, "blocked": 1}
+  },
+  "n27": "BLOCKED",
+  "policy": "pause+private, never delete",
+  "exact_name_duplicates": [],
+  "measured_public_count": 16,
+  "keep_thread_five": ["a11oy", "killinchu", "immune", "lyte", "vertical-services"],
+  "keep_spaces_surface_six": ["a11oy", "killinchu", "immune", "szl-khipu", "szl-atelier", "governed-receipt-verifier"],
+  "ts": "2026-09-04T22:50:00Z"
+}
