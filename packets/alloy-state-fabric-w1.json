@@ -1,0 +1,29 @@
+{
+  "bind": "BIND_AS_A11OY_PACKAGE",
+  "lambda": "Conjecture 1",
+  "doctrine": "v11 LOCKED",
+  "order": "AO-2026-08-29-001",
+  "source": "szl-holdings/lyte-lattice",
+  "plane": "alloy-state-fabric",
+  "signer": "UNSIGNED-honest",
+  "proven_trust": false,
+  "product_certified": false,
+  "hub_write": false,
+  "executed": true,
+  "wave": "W1",
+  "ok": true,
+  "admitted": 9,
+  "blocked": 0,
+  "cells": [
+    {"n":"N1","id":"serve","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:01275e50bed3d5e8fa9c2d3b49e61e743f90502ba2fc62b0dcefeaa6e1e5d378"},
+    {"n":"N2","id":"graph","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:1cd1e2a5326bd6968c62149b0d6a144cf6aa1bd63a5e6c495844bd702c7f51c5"},
+    {"n":"N3","id":"guard","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:254214fc09a22a111afa00667bd69266318b7563e40e5c657f0ae8745ceddad0"},
+    {"n":"N4","id":"mosaic","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:cad5ff6034638e155bdeddf5488018d0ee6941a890f546a8169a8bb934b882c3"},
+    {"n":"N5","id":"lattice","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:0383d9c80debbe5db2a386cf6a0eca57e72104e920d5f41074c3eabaa91207dd"},
+    {"n":"N6","id":"cover","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:2a6ff4dd822032341eeafdfa045b19f0df5b80dc95f8ac9c6d9883643f2be67f"},
+    {"n":"N7","id":"quant","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:5c2c3045149741abdd52605645b68f28b80659223e192fc3e36bfa53e86e1528"},
+    {"n":"N8","id":"title","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:457e254b7d84cb33cee39d11db0a46fc93cba6eef5c7031a38a939a0235ecf7e"},
+    {"n":"N9","id":"retrieve","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:f204674ea1ed8b1cfd94789ee9fa0ff97505d891332e7b0eec939a1dff95a1c8"}
+  ],
+  "note": "W1 Core path acted on origin lyte-lattice."
+}

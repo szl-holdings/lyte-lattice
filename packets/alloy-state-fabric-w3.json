@@ -1,0 +1,29 @@
+{
+  "bind": "BIND_AS_A11OY_PACKAGE",
+  "lambda": "Conjecture 1",
+  "doctrine": "v11 LOCKED",
+  "order": "AO-2026-08-29-001",
+  "source": "szl-holdings/lyte-lattice",
+  "plane": "alloy-state-fabric",
+  "signer": "UNSIGNED-honest",
+  "proven_trust": false,
+  "product_certified": false,
+  "hub_write": false,
+  "executed": true,
+  "wave": "W3",
+  "ok": true,
+  "admitted": 8,
+  "blocked": 1,
+  "cells": [
+    {"n":"N19","id":"cache","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:0639231d6129b9eb1c5feb5265f928e4ffa3f0fe5afd004379695ebe59277df9"},
+    {"n":"N20","id":"voice","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:59f13f1ca67b9874e30e2380403f7b9b9e54893e83c82618ce68ffa77711a6ec"},
+    {"n":"N21","id":"sandbox","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:3d3c61ec691edca818ca4066c99b46218c2a36c6ff75eb1f1a16409508408892"},
+    {"n":"N22","id":"identity","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:609c903629fa2603ddcd5407ad724758ee58c49aa8bd63181722f412ddb40f30"},
+    {"n":"N23","id":"rails","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:b563d41d63c6af095af953b5583dbaaaee6e2a8ffb8e155b2381cce6bcbf886d"},
+    {"n":"N24","id":"browser","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:76a34b88ba97e83a9828638267179f8d6282c3a7dd88e6ece840cc5e77f2da19"},
+    {"n":"N25","id":"policy","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:c43d8436e3ddd7d08742c36c79742d4165eb54e9f9a55e1aa84908f3220c94b3"},
+    {"n":"N26","id":"wrap","status":"ok","honesty":"REPORTED","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:d901be0b4c4212c6e5d615e0044709cd1e015466be6db6df8eed341d5679b7d6"},
+    {"n":"N27","id":"train","status":"blocked","honesty":"UNAVAILABLE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:b3477ff6eb2b71d5f8af9bed58d4970e5d275ada480d2dbfd936e6e48b16b330"}
+  ],
+  "note": "W3 Plane edge acted on origin. N26 wrap joule REPORTED null. N27 GPU train blocked UNAVAILABLE."
+}

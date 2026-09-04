@@ -1,0 +1,29 @@
+{
+  "bind": "BIND_AS_A11OY_PACKAGE",
+  "lambda": "Conjecture 1",
+  "doctrine": "v11 LOCKED",
+  "order": "AO-2026-08-29-001",
+  "source": "szl-holdings/lyte-lattice",
+  "plane": "alloy-state-fabric",
+  "signer": "UNSIGNED-honest",
+  "proven_trust": false,
+  "product_certified": false,
+  "hub_write": false,
+  "executed": true,
+  "wave": "W2",
+  "ok": true,
+  "admitted": 9,
+  "blocked": 0,
+  "cells": [
+    {"n":"N10","id":"observe","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:387980a9587b4ae9759923ce972f50262f83b4562798a8412dfb3c5a0966e829"},
+    {"n":"N11","id":"tune","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:d30b0911ddf3bc0ff5ddbcb2cc580d251f767e57a79610f79ebb657b04a7febc"},
+    {"n":"N12","id":"schema","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:ef2811e61087133beb1e8521066965915631860151fca0a0dac6ec709be64bcc"},
+    {"n":"N13","id":"energy","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:b7ad83da31a514134c556cbea5fa2f8e4b8a9913e8a5ed39d2433c85170bf53c"},
+    {"n":"N14","id":"tool","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:a277769876a774148f95a7ad08a32595d7a709b3cb643a913d16cf8ca21d4e05"},
+    {"n":"N15","id":"memory","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:b0afa34347a7734dcb79e9436c004d95c41dd1a140c04fd31a4631914a7f7648"},
+    {"n":"N16","id":"eval","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:fefcac7ff3950a9f611257d2596d92f86debaf8ba53dca60afd25abc5321c11c"},
+    {"n":"N17","id":"mesh","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:4b45ff9fe01f111020195f2322e55d58de04605e64c5e2bc0ed615a122bbf65d"},
+    {"n":"N18","id":"route","status":"ok","honesty":"LIVE","energy_joule":null,"signed":false,"proven_trust":false,"hash":"UNSIGNED-honest:12fa98d41e2e8a24c153cd20a2f41ebbacde21c32da68c0f8630afc1296884ce"}
+  ],
+  "note": "W2 Observe+shape acted on origin. N17 mesh now admits on vllm hologram tag. Joule still null."
+}
