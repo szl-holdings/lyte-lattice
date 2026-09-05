@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
-"""Verify Lyte's read-only delegation; this script never publishes or probes uptime."""
+"""Verify Lyte's read-only delegation; never publish or certify runtime uptime."""
 from __future__ import annotations
 import argparse
 import ast
@@ -26,7 +26,40 @@ def constants(source: str) -> dict[str, Any]:
                 pass
     return result
 
-def validate(alignment: dict, publisher: str, entrypoint: str, workflow: str) -> dict:
+def validate_card(text: str) -> None:
+    if not text.startswith('---\n'):
+        raise ContractError('README must start with Hub YAML metadata')
+    end = text.find('\n---\n', 4)
+    if end < 0:
+        raise ContractError('README metadata closing delimiter missing')
+    rows = [line.split(':', 1)[1].strip() for line in text[4:end].splitlines() if line.startswith('short_description:')]
+    if len(rows) != 1:
+        raise ContractError('Exactly one short_description is required')
+    raw = rows[0]
+    quoted = len(raw) >= 2 and raw[0] in {'"', "'"} and raw[-1] == raw[0]
+    if ':' in raw and not quoted:
+        raise ContractError('Colon-bearing description must be quoted')
+    value = raw[1:-1] if quoted else raw
+    if not value or len(value) > 60:
+        raise ContractError('Description must contain 1..60 characters')
+
+def validate_caller(text: str) -> None:
+    if not re.search(r'(?m)^permissions:\s*\n  contents: read\s*$', text):
+        raise ContractError('Caller must explicitly have read-only contents permission')
+    forbidden = (
+        r'\$\{\{\s*secrets\.',
+        r'(?m)^\s+[\w-]+:\s*write\s*$',
+        r'(?m)^\s+HF_[A-Z_]+:',
+        r'reusable-hf-deploy\.yml@',
+        r'\b(?:upload_folder|upload_file|create_repo|restart_space|pause_space)\s*\(',
+    )
+    if any(re.search(pattern, text) for pattern in forbidden):
+        raise ContractError('Presentation caller must not own a provider credential or write lane')
+
+def validate(alignment: dict, publisher: str, entrypoint: str, workflow: str,
+             caller: str, readme: str) -> dict:
+    validate_card(readme)
+    validate_caller(caller)
     if alignment.get('schema') != 'szl.estate.alignment/v1':
         raise ContractError('Unrecognized estate authority schema')
     rows = [row for row in alignment.get('public_bodies', []) if row.get('id') == 'lyte']
@@ -80,9 +113,11 @@ def main() -> int:
     paths = {'alignment': args.governance / 'estate/alignment.v1.json',
              'publisher': args.publisher / 'scripts/hf_publish_lyte_enterprise.py',
              'entrypoint': args.publisher / 'scripts/hf_publish_vertical_flagships_v4.py',
-             'workflow': args.publisher / '.github/workflows/hf-sync.yml'}
+             'workflow': args.publisher / '.github/workflows/hf-sync.yml',
+             'caller': args.source / '.github/workflows/hf-deploy.yml',
+             'readme': args.source / 'README.md'}
     content = {key: path.read_text(encoding='utf-8') for key, path in paths.items()}
-    result = validate(json.loads(content['alignment']), content['publisher'], content['entrypoint'], content['workflow'])
+    result = validate(json.loads(content['alignment']), content['publisher'], content['entrypoint'], content['workflow'], content['caller'], content['readme'])
     result['checkout_revisions'] = {'presentation': revision(args.source), 'governance': revision(args.governance), 'publisher': revision(args.publisher)}
     result['input_sha256'] = {key: hashlib.sha256(value.encode()).hexdigest() for key, value in content.items()}
     args.output.parent.mkdir(parents=True, exist_ok=True)
