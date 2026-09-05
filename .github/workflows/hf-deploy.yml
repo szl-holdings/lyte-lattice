@@ -1,10 +1,8 @@
-# Copyright 2026 SZL Holdings — SPDX-License-Identifier: Apache-2.0
-name: Verify central Hugging Face publication ownership
+# SPDX-License-Identifier: Apache-2.0
+name: Verify canonical Lyte publication ownership
 
-# Provider writes belong to the protected szl-holdings/.github publisher because
-# reusable workflows inherit the caller repository's secret scope. This workflow
-# never handles provider credentials; it proves the central lane still owns this
-# exact source/target pair and emits an immutable delegation receipt.
+# Historical filename only. This presentation package has no provider writer.
+# A11oy publishes the source-owned lyte-services runtime to SZLHOLDINGS/lyte.
 on:
   push:
     branches: [main]
@@ -12,209 +10,62 @@ on:
     branches: [main]
     paths:
       - .github/workflows/hf-deploy.yml
-      - .dockerignore
-      - Dockerfile
-      - Dockerfile.dockerignore
-      - server.py
-      - space/index.html
+      - scripts/verify-hf-ownership.py
+      - scripts/test_hf_ownership.py
       - README.md
+      - Dockerfile
+      - server.py
+      - space/**
   workflow_dispatch: {}
 
 permissions:
   contents: read
 
 concurrency:
-  group: hf-central-delegation-${{ github.repository }}-${{ github.ref }}
+  group: lyte-canonical-delegation-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   verify:
-    name: Verify central exact-source publisher contract
+    name: Verify presentation, backend, and canonical publisher authority
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Harden runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
-        with:
-          egress-policy: audit
-
-      - name: Checkout exact source event
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Checkout exact presentation source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           path: source
           persist-credentials: false
-          fetch-depth: 1
-
-      - name: Checkout current protected publication owner
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Checkout the estate authority manifest
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: szl-holdings/.github
           ref: main
           path: governance
           persist-credentials: false
-          fetch-depth: 1
-
-      - name: Set up exact Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - name: Checkout the canonical single publisher
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          python-version: "3.12.10"
-
-      - name: Validate Hugging Face card metadata
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 -I -P <<'PY'
-          from pathlib import Path
-
-          readme = Path('source/README.md')
-          if not readme.is_file():
-              raise SystemExit('README.md is missing')
-          text = readme.read_text(encoding='utf-8')
-          if not text.startswith('---\n'):
-              raise SystemExit('README.md must start with Hugging Face YAML metadata')
-          end = text.find('\n---\n', 4)
-          if end < 0:
-              raise SystemExit('README.md metadata closing delimiter is missing')
-          values = []
-          for line in text[4:end].splitlines():
-              if line.startswith('short_description:'):
-                  values.append(line.split(':', 1)[1].strip())
-          if len(values) != 1:
-              raise SystemExit('README.md must define exactly one short_description')
-          raw_description = values[0]
-          if not raw_description:
-              raise SystemExit('short_description must not be empty')
-          quoted = (
-              len(raw_description) >= 2
-              and raw_description[0] in {'"', "'"}
-              and raw_description[-1] == raw_description[0]
-          )
-          if ':' in raw_description and not quoted:
-              raise SystemExit(
-                  'colon-bearing short_description must be quoted as a YAML scalar'
-              )
-          description = raw_description[1:-1] if quoted else raw_description
-          if not description:
-              raise SystemExit('short_description must not be empty after unquoting')
-          if len(description) > 60:
-              raise SystemExit(
-                  f'short_description is {len(description)} characters; maximum is 60'
-              )
-          print(
-              f'Hugging Face card metadata: PASS '
-              f'(short_description={len(description)} chars; quoted={quoted})'
-          )
-          PY
-
-      - name: Prove delegation and emit receipt
-        shell: bash
-        env:
-          EXPECTED_REPO: lyte-lattice
-          EXPECTED_HF_REPO: SZLHOLDINGS/lyte-lattice
-          EXPECTED_SMOKE_PATHS: '["/","/healthz","/api/second-brain","/api/formulas"]'
-          SOURCE_WORKFLOW: .github/workflows/hf-deploy.yml
-        run: |
-          set -euo pipefail
-          mkdir -p evidence
-          python3 -I -P <<'PY'
-          from __future__ import annotations
-
-          import hashlib
-          import json
-          import os
-          import re
-          import subprocess
-          from pathlib import Path
-
-          repo = os.environ['EXPECTED_REPO']
-          hf_repo = os.environ['EXPECTED_HF_REPO']
-          smoke = os.environ['EXPECTED_SMOKE_PATHS']
-          source_workflow = Path('source') / os.environ['SOURCE_WORKFLOW']
-          central_workflow = Path('governance/.github/workflows/publish-operator-spaces.yml')
-
-          source_text = source_workflow.read_text(encoding='utf-8')
-          central_text = central_workflow.read_text(encoding='utf-8')
-          source_sha = subprocess.check_output(
-              ['git', '-C', 'source', 'rev-parse', '--verify', 'HEAD'], text=True
-          ).strip()
-          central_sha = subprocess.check_output(
-              ['git', '-C', 'governance', 'rev-parse', '--verify', 'HEAD'], text=True
-          ).strip()
-          sha_pattern = re.compile(r'^[0-9a-f]{40}$')
-          if not sha_pattern.fullmatch(source_sha) or not sha_pattern.fullmatch(central_sha):
-              raise SystemExit('source identities must be exact 40-character commit SHAs')
-
-          forbidden_patterns = {
-              'local Hugging Face provider secret': re.compile(
-                  r'(?m)^\s+HF_TOKEN:\s*\$\{\{\s*secrets\.HF_'
-              ),
-              'caller-scoped reusable provider publisher': re.compile(
-                  r'(?m)^\s+uses:\s*szl-holdings/\.github/\.github/workflows/'
-                  r'reusable-hf-deploy\.yml@'
-              ),
-          }
-          present = [
-              name for name, pattern in forbidden_patterns.items()
-              if pattern.search(source_text)
-          ]
-          if present:
-              raise SystemExit(f'caller still attempts provider publication: {present!r}')
-
-          required_global = (
-              'schedule:',
-              "if: github.event_name != 'pull_request'",
-              '--require-default-branch-tip',
-              '--restart-space',
-              '--attest',
-              '--wait-running 1200',
-              'secrets.HF_ORG_TOKEN',
-              'secrets.HF_ORG_TOKEN1',
-              'secrets.HF_TOKEN',
-              'secrets.HF_WRITE_TOKEN',
-          )
-          missing = [item for item in required_global if item not in central_text]
-          if missing:
-              raise SystemExit(f'central publisher controls missing: {missing!r}')
-          if 'environment: production' in central_text:
-              raise SystemExit('central publisher is stalled behind a duplicate environment review')
-
-          entry = re.compile(
-              rf'-\s+repo:\s*{re.escape(repo)}\s*\n'
-              rf'\s+hf_repo:\s*{re.escape(hf_repo)}\s*\n'
-              rf"\s+smoke_paths:\s*'{re.escape(smoke)}'"
-          )
-          if not entry.search(central_text):
-              raise SystemExit(f'central publisher does not own {repo} -> {hf_repo}')
-
-          receipt = {
-              'schema': 'szl.hf.central-delegation.v1',
-              'state': 'DELEGATED',
-              'source_repository': f'szl-holdings/{repo}',
-              'source_sha': source_sha,
-              'publisher_repository': 'szl-holdings/.github',
-              'publisher_sha': central_sha,
-              'publisher_workflow': '.github/workflows/publish-operator-spaces.yml',
-              'hf_repository': hf_repo,
-              'smoke_paths': json.loads(smoke),
-              'source_workflow_sha256': hashlib.sha256(source_text.encode()).hexdigest(),
-              'publisher_workflow_sha256': hashlib.sha256(central_text.encode()).hexdigest(),
-              'provider_credentials_local': False,
-              'default_tip_guard_required': True,
-              'restart_required': True,
-              'live_attestation_required': True,
-          }
-          Path('evidence/hf-central-delegation.json').write_text(
-              json.dumps(receipt, indent=2, sort_keys=True) + '\n', encoding='utf-8'
-          )
-          print(json.dumps(receipt, indent=2, sort_keys=True))
-          PY
-
-      - name: Upload immutable delegation evidence
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+          repository: szl-holdings/a11oy
+          ref: main
+          path: publisher
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
-          name: hf-central-delegation-${{ github.sha }}
-          path: evidence/hf-central-delegation.json
+          python-version: '3.12'
+      - name: Reject wrong targets and mismatched pins offline
+        run: python -I source/scripts/test_hf_ownership.py
+      - name: Verify actual ownership and record the exact inspected commits
+        run: >-
+          python -I source/scripts/verify-hf-ownership.py
+          --source source --governance governance --publisher publisher
+          --output evidence/hf-canonical-delegation.json
+      - name: Preserve the source-authority receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: lyte-canonical-delegation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: evidence/hf-canonical-delegation.json
           if-no-files-found: error
           retention-days: 90
