@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 SZL Holdings — SPDX-License-Identifier: Apache-2.0
 name: Verify canonical Lyte publication ownership
 
 # Historical filename only. This presentation package has no provider writer.
@@ -13,7 +13,9 @@ on:
       - scripts/verify-hf-ownership.py
       - scripts/test_hf_ownership.py
       - README.md
+      - .dockerignore
       - Dockerfile
+      - Dockerfile.dockerignore
       - server.py
       - space/**
   workflow_dispatch: {}
@@ -31,12 +33,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Harden runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c
+        with:
+          egress-policy: audit
       - name: Checkout exact presentation source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           path: source
           persist-credentials: false
+          fetch-depth: 1
       - name: Checkout the estate authority manifest
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -44,6 +51,7 @@ jobs:
           ref: main
           path: governance
           persist-credentials: false
+          fetch-depth: 1
       - name: Checkout the canonical single publisher
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -51,11 +59,12 @@ jobs:
           ref: main
           path: publisher
           persist-credentials: false
+          fetch-depth: 1
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.12'
-      - name: Reject wrong targets and mismatched pins offline
+      - name: Reject wrong targets, invalid metadata and local writers offline
         run: python -I source/scripts/test_hf_ownership.py
       - name: Verify actual ownership and record the exact inspected commits
         run: >-
