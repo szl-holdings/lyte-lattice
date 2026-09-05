@@ -8,7 +8,7 @@ app_port: 7860
 pinned: false
 license: apache-2.0
 suggested_hardware: cpu-basic
-short_description: "Lyte presentation package; canonical runtime is SZLHOLDINGS/lyte"
+short_description: "Lyte package; runtime: SZLHOLDINGS/lyte"
 tags:
   - governed-ai
   - a11oy
