@@ -1,5 +1,6 @@
 import { completeGrok, type CompleteInput, type GrokMsg } from "./grok";
 import { streamGrok } from "./stream";
+import { completionMessages } from "./completion-history";
 import { ENGINE_PROFILES, useLyte } from "./store";
 import { parseJsonLoose, repairPrompt, schemaPrompt, validateSchema, type JsonSchema } from "./engines/schema";
 import { scanGuard } from "./engines/guard";
@@ -42,11 +43,7 @@ function completeInput(opts: {
   const maxTokens = throttled ? Math.min(180, profile.maxTokens) : profile.maxTokens;
   const temp = useLyte.getState().serve.temperatureOverride ?? profile.temperature;
   const sys = [systemFor(engine), opts.extraSystem].filter(Boolean).join("\n\n");
-  const messages: GrokMsg[] = [
-    { role: "system", content: sys },
-    ...(opts.history ?? []),
-    { role: "user", content: opts.user.slice(0, 7000) },
-  ];
+  const messages = completionMessages(sys, opts.user.slice(0, 7000), opts.history);
   return {
     messages,
     temperature: temp,

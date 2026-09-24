@@ -97,13 +97,15 @@ source, browser bundles, and evidence receipts.
 Set `XAI_API_KEY` on the application server to use the completion integration.
 `XAI_MODEL` optionally selects a model available to that provider account; the
 existing `grok-4.5` default is preserved. Requests have a 60-second provider
-deadline, at most 32 messages and 32,000 prompt characters. The stream reports
+deadline, at most 32 messages and 32,000 prompt characters. Conversation requests
+retain the current prompt and instructions, dropping oldest history as needed
+to fit that budget. The stream reports
 success only after the provider's completion event; disconnects, malformed
 events, and empty completions report an error. No provider key or paid inference
 is required for the regression suite:
 
 ```bash
-node --experimental-strip-types --test src/lib/grok-contract.test.ts
+node --experimental-strip-types --test src/lib/grok-contract.test.ts src/lib/completion-history.test.ts
 ```
 
 Apache-2.0 · Doctrine v11 LOCKED · Copyright 2026 SZL Holdings.
