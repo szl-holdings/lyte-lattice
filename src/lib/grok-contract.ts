@@ -76,8 +76,8 @@ export function clampCompleteInput(value: CompleteInput) {
   };
 }
 /**
- * xAI reasoning models (every Grok 4.x) reject `stop`, `presence_penalty` and
- * `frequency_penalty` with an error, so none of them is ever sent. A profile's
+ * xAI documents that its reasoning models reject `stop`, `presence_penalty` and
+ * `frequency_penalty` with an error, so none of them is sent for any model. A profile's
  * stop sequences are applied to the returned text instead (`truncateAtStop`,
  * `stopFilter`).
  */

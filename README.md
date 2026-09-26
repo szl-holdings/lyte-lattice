@@ -97,8 +97,8 @@ source, browser bundles, and evidence receipts.
 Set `XAI_API_KEY` on the application server to use the completion integration.
 `XAI_MODEL` optionally selects a model available to that provider account; the
 existing `grok-4.5` default is preserved. xAI documents that its reasoning
-models (the Grok 4.x line) reject `stop`, `presence_penalty` and
-`frequency_penalty`, so none of these is sent. A profile's stop sequences
+models reject `stop`, `presence_penalty` and
+`frequency_penalty`, so none of these is sent for any model. A profile's stop sequences
 (TensorRT-LLM: three newlines) are applied to the returned text on the server
 instead. Requests have a 60-second provider
 deadline, at most 32 messages and 32,000 prompt characters. Conversation requests
