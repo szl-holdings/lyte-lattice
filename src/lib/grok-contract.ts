@@ -76,12 +76,43 @@ export function clampCompleteInput(value: CompleteInput) {
   };
 }
 /**
+ * The one reviewed xAI model id. Every call site, disclosure and label derives
+ * from it; changing it is a model change and gets its own review.
+ */
+export const DEFAULT_GROK_MODEL = "grok-4.7";
+/** Human label for the default model, e.g. "Grok 4.7". */
+export const DEFAULT_GROK_LABEL = DEFAULT_GROK_MODEL.replace(/^grok-/, "Grok ");
+/**
+ * Ids a server override may select: the pin plus the single rollback target
+ * (the previous live pin). Adding an id here is itself a reviewed model change.
+ */
+export const ALLOWED_GROK_MODELS: readonly string[] = [DEFAULT_GROK_MODEL, "grok-4.5"];
+export type GrokModelEnv = { SZL_GROK_MODEL?: string; XAI_MODEL?: string };
+/**
+ * Resolve the model from server-side configuration: `SZL_GROK_MODEL`, then the
+ * deprecated `XAI_MODEL`, then `DEFAULT_GROK_MODEL`. Values are trimmed and a
+ * blank value counts as unset. Any value outside `ALLOWED_GROK_MODELS` returns
+ * null, and callers fail closed before any provider call; it never falls back
+ * to the default.
+ */
+export function resolveGrokModel(env: GrokModelEnv): string | null {
+  for (const raw of [env.SZL_GROK_MODEL, env.XAI_MODEL]) {
+    const value = raw?.trim();
+    if (value) return ALLOWED_GROK_MODELS.includes(value) ? value : null;
+  }
+  return DEFAULT_GROK_MODEL;
+}
+/**
  * xAI documents that its reasoning models reject `stop`, `presence_penalty` and
  * `frequency_penalty` with an error, so none of them is sent for any model. A profile's
  * stop sequences are applied to the returned text instead (`truncateAtStop`,
  * `stopFilter`).
  */
-export function grokRequestBody(data: CompleteInput, stream = false, model = "grok-4.5") {
+export function grokRequestBody(
+  data: CompleteInput,
+  stream = false,
+  model: string = DEFAULT_GROK_MODEL,
+) {
   const body: Record<string, unknown> = { model, ...clampCompleteInput(data), stream };
   if (data.jsonSchema)
     body.response_format = {

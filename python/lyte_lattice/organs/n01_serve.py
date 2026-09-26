@@ -1,13 +1,14 @@
 """N1 Serve — cite vLLM / SGLang / Ollama / TensorRT-LLM. Take the job. Do not rehost.
 
-Not a local GPU cluster. Completions terminate on Grok 4.5 via the TS Serve cell.
+Not a local GPU cluster. Completions terminate on Grok via the TS Serve cell (model label:
+GROK_MODEL_LABEL in lyte_lattice.organ).
 This organ receipts the decode posture. It does not run GPU inference.
 """
 from __future__ import annotations
 
 from typing import Any, Mapping
 
-from lyte_lattice.organ import num, seal, text
+from lyte_lattice.organ import GROK_MODEL_LABEL, num, seal, text
 
 PROFILES: dict[str, dict[str, Any]] = {
     "vllm": {
@@ -62,7 +63,7 @@ ALIASES = {
 }
 
 NOTE = (
-    "Completions in this hologram terminate on Grok 4.5 via the TS Serve cell. "
+    f"Completions in this hologram terminate on {GROK_MODEL_LABEL} via the TS Serve cell. "
     "This organ receipts the posture, it does not run GPU inference."
 )
 DEFAULT_PROMPT = "Ping the lattice."
@@ -111,7 +112,7 @@ def _decode_plan(engine: str, profile: Mapping[str, Any], prompt: str, json_bias
     stop = profile.get("stop") or []
     if stop:
         steps.append("Honor stop sequences: " + ", ".join(str(s) for s in stop))
-    steps.append("Hand the completion to Grok 4.5 via the TS Serve cell")
+    steps.append(f"Hand the completion to {GROK_MODEL_LABEL} via the TS Serve cell")
     steps.append("Seal this receipt; do not run GPU inference in the organ")
     return steps
 

@@ -1,4 +1,5 @@
 import type { CellId } from "./cells";
+import { DEFAULT_GROK_LABEL } from "./grok-contract";
 
 export type DeskField = {
   key: string;
@@ -18,7 +19,7 @@ export type OrganDeskSpec = {
 export const ORGAN_DESKS: Record<string, OrganDeskSpec> = {
   serve: {
     id: "serve",
-    hint: "Receipt the decode posture. Completions still run on Grok 4.5 in this cell's live view.",
+    hint: `Receipt the decode posture. Completions still run on ${DEFAULT_GROK_LABEL} in this cell's live view.`,
     fields: [
       { key: "engine", label: "Engine", kind: "select", options: ["vllm", "sglang", "ollama", "trtllm"], def: "sglang" },
       { key: "prompt", label: "Prompt", kind: "textarea", def: "Draft a terse FNOL note for a sudden pipe burst." },

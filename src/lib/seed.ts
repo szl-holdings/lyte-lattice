@@ -1,5 +1,6 @@
 import { buildChunks } from "./engines/chunk";
 import { CELL_IDS, type CellId } from "./cells";
+import { DEFAULT_GROK_LABEL } from "./grok-contract";
 import type {
   CoverClaim,
   CoverPolicy,
@@ -34,7 +35,7 @@ export const SEED_DOCS: MosaicDoc[] = [
     weight: 1,
     quality: 0.88,
     tags: ["inference", "vllm", "sglang"],
-    text: `vLLM profile: continuous batching, paged attention, default temperature 0.7, top_p 0.95, suited to mixed chat throughput. SGLang profile: radix-attention prefix cache and constrained decoding, temperature 0.6, prefers JSON and tool-shaped answers. Ollama profile: local-first, higher temperature 0.8, shorter system, conversational. TensorRT-LLM profile: low latency, conservative temperature 0.4, tight max tokens, good for extraction. All four profiles in this console terminate on Grok 4.5; they are serving postures, not separate GPU runtimes. Keep max_tokens modest. Never loop the model. User initiates every completion.`,
+    text: `vLLM profile: continuous batching, paged attention, default temperature 0.7, top_p 0.95, suited to mixed chat throughput. SGLang profile: radix-attention prefix cache and constrained decoding, temperature 0.6, prefers JSON and tool-shaped answers. Ollama profile: local-first, higher temperature 0.8, shorter system, conversational. TensorRT-LLM profile: low latency, conservative temperature 0.4, tight max tokens, good for extraction. All four profiles in this console terminate on ${DEFAULT_GROK_LABEL}; they are serving postures, not separate GPU runtimes. Keep max_tokens modest. Never loop the model. User initiates every completion.`,
   }),
   doc({
     id: "doc_lattice",

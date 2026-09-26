@@ -8,7 +8,7 @@ import hashlib
 import random
 from typing import Any, Mapping
 
-from lyte_lattice.organ import num, seal, text
+from lyte_lattice.organ import GROK_MODEL_LABEL, num, seal, text
 
 SEED = 20260829
 DEFAULT_K = 3
@@ -51,7 +51,7 @@ CORPUS: list[dict[str, Any]] = [
             "decoding, temperature 0.6, prefers JSON and tool-shaped answers. Ollama profile: local-first, "
             "higher temperature 0.8, shorter system, conversational. TensorRT-LLM profile: low latency, "
             "conservative temperature 0.4, tight max tokens, good for extraction. All four profiles in this "
-            "console terminate on Grok 4.5; they are serving postures, not separate GPU runtimes. Keep "
+            f"console terminate on {GROK_MODEL_LABEL}; they are serving postures, not separate GPU runtimes. Keep "
             "max_tokens modest. Never loop the model. User initiates every completion."
         ),
     },
