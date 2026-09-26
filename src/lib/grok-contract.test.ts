@@ -5,9 +5,11 @@ import {
   readSseData,
   validateCompleteInput,
   grokRequestBody,
+  stopFilter,
+  truncateAtStop,
 } from "./grok-contract.ts";
 import { streamGrok } from "./stream.ts";
-import { handleComplete } from "./grok-stream.server.ts";
+import { completeOnce, handleComplete } from "./grok-stream.server.ts";
 
 const input = { messages: [{ role: "user" as const, content: "Explain the measured result" }] };
 function bytes(text: string) {
@@ -220,4 +222,138 @@ test("server translates network failures and non-SSE responses without leaking u
   });
   assert.equal(response.status, 502);
   assert.doesNotMatch(await response.text(), /diagnostic/);
+});
+
+// xAI reasoning models reject stop, presence_penalty and frequency_penalty.
+const REJECTED_BY_REASONING_MODELS = ["stop", "presence_penalty", "frequency_penalty"];
+const withStop = { ...input, stop: ["\n\n\n"] };
+const placeholder = { apiKey: "test-only-placeholder", model: undefined };
+type FetchStub = { mock: { calls: { arguments: unknown[] }[] } };
+function sentBody(stub: FetchStub, call = 0) {
+  const options = stub.mock.calls[call].arguments[1] as RequestInit;
+  return JSON.parse(String(options.body)) as Record<string, unknown>;
+}
+function chatJson(content: string) {
+  return Response.json({
+    choices: [{ message: { content } }],
+    usage: { prompt_tokens: 5, completion_tokens: 3 },
+  });
+}
+function providerDelta(content: string) {
+  return `data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`;
+}
+async function streamEvents(response: Response) {
+  const events: Record<string, unknown>[] = [];
+  for await (const event of readSseData(response.body!)) events.push(JSON.parse(event));
+  return events;
+}
+test("request bodies never carry stop or penalty parameters", () => {
+  for (const stream of [false, true])
+    for (const extra of [{}, { jsonObject: true }, { jsonSchema: { name: "r", schema: {} } }]) {
+      const body = grokRequestBody({ ...withStop, ...extra }, stream);
+      for (const key of REJECTED_BY_REASONING_MODELS) assert.equal(key in body, false, key);
+    }
+});
+test("both provider paths omit stop from the bytes sent to xAI", async (t) => {
+  const stub = t.mock.method(globalThis, "fetch", async () => chatJson("ok"));
+  await completeOnce(withStop, placeholder);
+  stub.mock.mockImplementation(async () => sse("data: [DONE]\n\n"));
+  await (await handleComplete(request(withStop), placeholder)).text();
+  assert.equal(stub.mock.callCount(), 2);
+  for (const call of [0, 1])
+    for (const key of REJECTED_BY_REASONING_MODELS)
+      assert.equal(key in sentBody(stub, call), false, key);
+});
+test("stop sequences are applied locally at the earliest match", () => {
+  assert.equal(truncateAtStop("keep\n\n\ndrop", ["\n\n\n"]), "keep");
+  assert.equal(truncateAtStop("a END b STOP c", ["STOP", "END"]), "a ");
+  assert.equal(truncateAtStop("no match", ["\n\n\n"]), "no match");
+  assert.equal(truncateAtStop("untouched\n\n\n", undefined), "untouched\n\n\n");
+  assert.equal(truncateAtStop("untouched", []), "untouched");
+});
+test("streaming stop filter matches whole-text truncation for any chunking", () => {
+  let seed = 7;
+  const rand = (n: number) => (seed = (seed * 48271) % 2147483647) % n;
+  const alphabet = ["a", "\n", "\n", "b", "🌌", " "];
+  for (let round = 0; round < 500; round++) {
+    let text = "";
+    for (let i = rand(40); i > 0; i--) text += alphabet[rand(alphabet.length)];
+    const stop = round % 3 ? ["\n\n\n"] : ["\n\n\n", "b🌌"];
+    const filter = stopFilter(stop);
+    let out = "";
+    let i = 0;
+    while (i < text.length) {
+      const size = 1 + rand(5);
+      const part = filter.push(text.slice(i, i + size));
+      // An emitted delta never ends inside a surrogate pair.
+      if (part) assert.equal(/[\uD800-\uDBFF]$/.test(part), false);
+      out += part;
+      i += size;
+    }
+    out += filter.flush();
+    assert.equal(out, truncateAtStop(text, stop), JSON.stringify({ text, stop }));
+  }
+  const passthrough = stopFilter(undefined);
+  assert.equal(passthrough.push("a\n\n\nb"), "a\n\n\nb");
+  assert.equal(passthrough.flush(), "");
+});
+test("non-streaming completion truncates at the profile stop sequence", async (t) => {
+  const stub = t.mock.method(globalThis, "fetch", async () => chatJson("keep this\n\n\nnot this"));
+  assert.deepEqual(await completeOnce(withStop, placeholder), {
+    ok: true,
+    text: "keep this",
+    usage: { prompt: 5, completion: 3 },
+  });
+  // Without a stop sequence the provider text is returned unchanged.
+  assert.deepEqual(await completeOnce(input, placeholder), {
+    ok: true,
+    text: "keep this\n\n\nnot this",
+    usage: { prompt: 5, completion: 3 },
+  });
+  // Text that is empty once truncated is still no completion.
+  stub.mock.mockImplementation(async () => chatJson("\n\n\nonly after the stop"));
+  assert.deepEqual(await completeOnce(withStop, placeholder), {
+    ok: false,
+    error: "AI provider returned no completion",
+  });
+});
+test("non-streaming completion without a key is unavailable and never fetches", async (t) => {
+  const stub = t.mock.method(globalThis, "fetch", async () => {
+    throw new Error("unexpected request");
+  });
+  assert.deepEqual(await completeOnce(withStop, { apiKey: undefined, model: undefined }), {
+    ok: false,
+    error: "AI is not available in this environment",
+  });
+  assert.equal(stub.mock.callCount(), 0);
+});
+test("streaming completion withholds text after a stop split across deltas", async (t) => {
+  t.mock.method(globalThis, "fetch", async () =>
+    sse(
+      providerDelta("keep\n") +
+        providerDelta("\n") +
+        providerDelta("\nnot this") +
+        providerDelta(" or this") +
+        'data: {"usage":{"prompt_tokens":2,"completion_tokens":9}}\n\ndata: [DONE]\n\n',
+    ),
+  );
+  const events = await streamEvents(await handleComplete(request(withStop), placeholder));
+  assert.equal(events.map((e) => e.delta ?? "").join(""), "keep");
+  assert.equal(events.filter((e) => e.done).length, 1);
+  assert.deepEqual(events.at(-1), { done: true });
+  assert.deepEqual(events.find((e) => e.usage)?.usage, { prompt: 2, completion: 9 });
+});
+test("streaming completion releases held-back text when no stop appears", async (t) => {
+  t.mock.method(globalThis, "fetch", async () =>
+    sse(providerDelta("ends in\n\n") + "data: [DONE]\n\n"),
+  );
+  const events = await streamEvents(await handleComplete(request(withStop), placeholder));
+  assert.equal(events.map((e) => e.delta ?? "").join(""), "ends in\n\n");
+  assert.deepEqual(events.at(-1), { done: true });
+});
+test("streaming truncation after a stop still requires the provider DONE event", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => sse(providerDelta("a\n\n\nb")));
+  const events = await streamEvents(await handleComplete(request(withStop), placeholder));
+  assert.equal(events.filter((e) => e.done).length, 0);
+  assert.match(String(events.at(-1)?.error), /ended before completion/);
 });
