@@ -95,8 +95,13 @@ is an unavailable capability, never a mock success. Keep credentials out of
 source, browser bundles, and evidence receipts.
 
 Set `XAI_API_KEY` on the application server to use the completion integration.
-`XAI_MODEL` optionally selects a model available to that provider account; the
-existing `grok-4.5` default is preserved. xAI documents that its reasoning
+The model is pinned to `grok-4.7` (`DEFAULT_GROK_MODEL` in
+`src/lib/grok-contract.ts`; every label derives from it). The server-side
+`SZL_GROK_MODEL` may select only an id in `ALLOWED_GROK_MODELS` (the pin, or
+`grok-4.5` as the rollback target); a blank value counts as unset. `XAI_MODEL` is a
+deprecated fallback read only when `SZL_GROK_MODEL` is unset, under the same
+allowlist. Any other value makes the integration unavailable before any
+provider call; it never falls back silently. xAI documents that its reasoning
 models reject `stop`, `presence_penalty` and
 `frequency_penalty`, so none of these is sent for any model. A profile's stop sequences
 (TensorRT-LLM: three newlines) are applied to the returned text on the server
