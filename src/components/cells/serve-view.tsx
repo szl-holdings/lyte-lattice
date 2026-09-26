@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { Field, Panel, PanelHeader } from "@/components/ui/panel";
+import { DEFAULT_GROK_LABEL, DEFAULT_GROK_MODEL } from "@/lib/grok-contract";
 import { ENGINE_PROFILES, useLyte } from "@/lib/store";
 import { gate, runLocalGuard, runStream } from "@/lib/run-ai";
 import type { EngineId } from "@/lib/types";
@@ -133,7 +134,10 @@ export function ServeView() {
       <div className="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
         <Panel pad={false} className="flex min-h-[420px] flex-col">
           <div className="flex items-center justify-between border-b border-border px-5 py-3">
-            <PanelHeader title="Completions" hint="User-initiated. Grok 4.5 under the selected profile." />
+            <PanelHeader
+              title="Completions"
+              hint={`User-initiated. ${DEFAULT_GROK_LABEL} under the selected profile.`}
+            />
             <Button variant="ghost" size="sm" onClick={clearServe}>
               Clear
             </Button>
@@ -220,7 +224,7 @@ export function ServeView() {
           <ul className="space-y-3 text-sm">
             <li className="flex justify-between gap-3">
               <span className="text-muted">Model</span>
-              <span className="font-mono text-xs">grok-4.5</span>
+              <span className="font-mono text-xs">{DEFAULT_GROK_MODEL}</span>
             </li>
             <li className="flex justify-between gap-3">
               <span className="text-muted">Adapter</span>
@@ -283,7 +287,7 @@ export function ServeView() {
             </Button>
           </div>
           <p className="mt-5 text-xs leading-relaxed text-muted">
-            Profiles are real decoding postures on Grok 4.5, not local GPUs.
+            Profiles are real decoding postures on {DEFAULT_GROK_LABEL}, not local GPUs.
           </p>
         </Panel>
       </div>

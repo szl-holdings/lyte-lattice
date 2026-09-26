@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
+import { readdirSync, readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
+  ALLOWED_GROK_MODELS,
+  DEFAULT_GROK_LABEL,
+  DEFAULT_GROK_MODEL,
+  resolveGrokModel,
   clampCompleteInput,
   readSseData,
   validateCompleteInput,
@@ -9,7 +14,7 @@ import {
   truncateAtStop,
 } from "./grok-contract.ts";
 import { streamGrok } from "./stream.ts";
-import { completeOnce, handleComplete } from "./grok-stream.server.ts";
+import { completeOnce, grokServerConfig, handleComplete } from "./grok-stream.server.ts";
 
 const input = { messages: [{ role: "user" as const, content: "Explain the measured result" }] };
 function bytes(text: string) {
@@ -36,7 +41,7 @@ test("missing provider key reports unavailable without fetching", async (t) => {
     throw new Error("unexpected request");
   });
   assert.equal(
-    (await handleComplete(request(), { apiKey: undefined, model: undefined })).status,
+    (await handleComplete(request(), { apiKey: undefined, model: DEFAULT_GROK_MODEL })).status,
     503,
   );
   assert.equal(stub.mock.callCount(), 0);
@@ -64,7 +69,7 @@ test("consumer cancellation aborts the provider request", async (t) => {
   });
   const response = await handleComplete(request(), {
     apiKey: "test-only-placeholder",
-    model: undefined,
+    model: DEFAULT_GROK_MODEL,
   });
   const reader = response.body!.getReader();
   assert.equal((await reader.read()).done, false);
@@ -174,7 +179,7 @@ test("server rejects invalid JSON shape without a provider call", async (t) => {
     (
       await handleComplete(request({ messages: null }), {
         apiKey: "test-only-placeholder",
-        model: undefined,
+        model: DEFAULT_GROK_MODEL,
       })
     ).status,
     400,
@@ -189,7 +194,7 @@ test("server emits one done event and preserves usage, including split Unicode",
   );
   const response = await handleComplete(request(), {
     apiKey: "test-only-placeholder",
-    model: undefined,
+    model: DEFAULT_GROK_MODEL,
   });
   assert.equal(response.status, 200);
   const body = await response.text();
@@ -202,7 +207,7 @@ test("server does not convert provider truncation into success", async (t) => {
     sse('data: {"choices":[{"delta":{"content":"partial"}}]}\n\n'),
   );
   const body = await (
-    await handleComplete(request(), { apiKey: "test-only-placeholder", model: undefined })
+    await handleComplete(request(), { apiKey: "test-only-placeholder", model: DEFAULT_GROK_MODEL })
   ).text();
   assert.match(body, /ended before completion/);
   assert.doesNotMatch(body, /"done":true/);
@@ -212,13 +217,18 @@ test("server translates network failures and non-SSE responses without leaking u
     throw new Error("private diagnostic");
   });
   assert.equal(
-    (await handleComplete(request(), { apiKey: "test-only-placeholder", model: undefined })).status,
+    (
+      await handleComplete(request(), {
+        apiKey: "test-only-placeholder",
+        model: DEFAULT_GROK_MODEL,
+      })
+    ).status,
     502,
   );
   stub.mock.mockImplementation(async () => Response.json({ private: "diagnostic" }));
   const response = await handleComplete(request(), {
     apiKey: "test-only-placeholder",
-    model: undefined,
+    model: DEFAULT_GROK_MODEL,
   });
   assert.equal(response.status, 502);
   assert.doesNotMatch(await response.text(), /diagnostic/);
@@ -227,7 +237,7 @@ test("server translates network failures and non-SSE responses without leaking u
 // xAI reasoning models reject stop, presence_penalty and frequency_penalty.
 const REJECTED_BY_REASONING_MODELS = ["stop", "presence_penalty", "frequency_penalty"];
 const withStop = { ...input, stop: ["\n\n\n"] };
-const placeholder = { apiKey: "test-only-placeholder", model: undefined };
+const placeholder = { apiKey: "test-only-placeholder", model: DEFAULT_GROK_MODEL };
 type FetchStub = { mock: { calls: { arguments: unknown[] }[] } };
 function sentBody(stub: FetchStub, call = 0) {
   const options = stub.mock.calls[call].arguments[1] as RequestInit;
@@ -321,7 +331,7 @@ test("non-streaming completion without a key is unavailable and never fetches", 
   const stub = t.mock.method(globalThis, "fetch", async () => {
     throw new Error("unexpected request");
   });
-  assert.deepEqual(await completeOnce(withStop, { apiKey: undefined, model: undefined }), {
+  assert.deepEqual(await completeOnce(withStop, { apiKey: undefined, model: DEFAULT_GROK_MODEL }), {
     ok: false,
     error: "AI is not available in this environment",
   });
@@ -356,4 +366,115 @@ test("streaming truncation after a stop still requires the provider DONE event",
   const events = await streamEvents(await handleComplete(request(withStop), placeholder));
   assert.equal(events.filter((e) => e.done).length, 0);
   assert.match(String(events.at(-1)?.error), /ended before completion/);
+});
+
+const KEY_ONLY = { XAI_API_KEY: "test-only-placeholder" };
+test("the pinned model is grok-4.7 with grok-4.5 as the only rollback target", () => {
+  assert.equal(DEFAULT_GROK_MODEL, "grok-4.7");
+  assert.equal(DEFAULT_GROK_LABEL, "Grok 4.7");
+  assert.deepEqual(ALLOWED_GROK_MODELS, ["grok-4.7", "grok-4.5"]);
+  assert.equal(resolveGrokModel({}), "grok-4.7");
+  assert.equal(grokRequestBody(input).model, "grok-4.7");
+  assert.equal(grokRequestBody(input, true).model, "grok-4.7");
+});
+test("both provider paths send the default model when no override is set", async (t) => {
+  const stub = t.mock.method(globalThis, "fetch", async () => chatJson("ok"));
+  assert.equal((await completeOnce(input, grokServerConfig(KEY_ONLY))).ok, true);
+  stub.mock.mockImplementation(async () => sse("data: [DONE]\n\n"));
+  await (await handleComplete(request(), grokServerConfig(KEY_ONLY))).text();
+  assert.equal(stub.mock.callCount(), 2);
+  assert.equal(sentBody(stub, 0).model, "grok-4.7");
+  assert.equal(sentBody(stub, 1).model, "grok-4.7");
+});
+test("an override to the rollback target is honoured on both paths", async (t) => {
+  assert.equal(resolveGrokModel({ SZL_GROK_MODEL: " grok-4.5\n" }), "grok-4.5");
+  // XAI_MODEL is a deprecated fallback, read only when SZL_GROK_MODEL is unset or blank.
+  assert.equal(resolveGrokModel({ XAI_MODEL: "grok-4.5" }), "grok-4.5");
+  assert.equal(resolveGrokModel({ SZL_GROK_MODEL: " ", XAI_MODEL: "grok-4.5" }), "grok-4.5");
+  assert.equal(resolveGrokModel({ SZL_GROK_MODEL: "grok-4.7", XAI_MODEL: "grok-4.5" }), "grok-4.7");
+  const env = { ...KEY_ONLY, SZL_GROK_MODEL: "grok-4.5" };
+  const stub = t.mock.method(globalThis, "fetch", async () => chatJson("ok"));
+  assert.equal((await completeOnce(input, grokServerConfig(env))).ok, true);
+  stub.mock.mockImplementation(async () => sse("data: [DONE]\n\n"));
+  await (await handleComplete(request(), grokServerConfig(env))).text();
+  assert.equal(sentBody(stub, 0).model, "grok-4.5");
+  assert.equal(sentBody(stub, 1).model, "grok-4.5");
+});
+test("a blank override uses the default", () => {
+  for (const blank of ["", " ", "\t\n"]) {
+    assert.equal(resolveGrokModel({ SZL_GROK_MODEL: blank }), "grok-4.7");
+    assert.equal(resolveGrokModel({ SZL_GROK_MODEL: blank, XAI_MODEL: blank }), "grok-4.7");
+  }
+});
+test("an unlisted model id fails closed with zero provider calls", async (t) => {
+  const stub = t.mock.method(globalThis, "fetch", async () => {
+    throw new Error("unexpected request");
+  });
+  const rejected = [
+    { SZL_GROK_MODEL: "grok-4.6" }, // well-formed, real, but not reviewed for this surface
+    { XAI_MODEL: "grok-4.6" },
+    { SZL_GROK_MODEL: "grok-4.6", XAI_MODEL: "grok-4.5" }, // never falls back
+    { SZL_GROK_MODEL: "grok-latest" },
+    { SZL_GROK_MODEL: "grok-4.7-latest" },
+    { SZL_GROK_MODEL: "GROK-4.7" },
+    { XAI_MODEL: "configured-model" },
+  ];
+  for (const override of rejected) {
+    const env = { ...KEY_ONLY, ...override };
+    assert.equal(resolveGrokModel(env), null, JSON.stringify(override));
+    assert.deepEqual(await completeOnce(withStop, grokServerConfig(env)), {
+      ok: false,
+      error: "AI is not available in this environment",
+    });
+    const response = await handleComplete(request(), grokServerConfig(env));
+    assert.equal(response.status, 503);
+    const text = await response.text();
+    assert.match(text, /not available/);
+    // The rejected value is never echoed.
+    for (const value of Object.values(override)) assert.equal(text.includes(value), false);
+  }
+  assert.equal(stub.mock.callCount(), 0);
+});
+test("the default server configuration reads the allowlisted override from process.env", async (t) => {
+  const saved = {
+    XAI_API_KEY: process.env.XAI_API_KEY,
+    SZL_GROK_MODEL: process.env.SZL_GROK_MODEL,
+    XAI_MODEL: process.env.XAI_MODEL,
+  };
+  t.after(() => {
+    for (const [key, value] of Object.entries(saved))
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+  });
+  const stub = t.mock.method(globalThis, "fetch", async () => {
+    throw new Error("unexpected request");
+  });
+  process.env.XAI_API_KEY = "test-only-placeholder";
+  delete process.env.XAI_MODEL;
+  process.env.SZL_GROK_MODEL = "grok-4.6";
+  assert.equal((await handleComplete(request())).status, 503);
+  assert.equal((await completeOnce(input)).ok, false);
+  assert.equal(stub.mock.callCount(), 0);
+});
+test("no other source file names a Grok model id or version label", () => {
+  const root = new URL("../../", import.meta.url);
+  const owners = new Set(["src/lib/grok-contract.ts", "src/lib/grok-contract.test.ts"]);
+  const offenders: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(new URL(dir, root), { withFileTypes: true })) {
+      const rel = `${dir}${entry.name}`;
+      if (entry.isDirectory()) walk(`${rel}/`);
+      else if (/\.(tsx?|py)$/.test(entry.name) && !owners.has(rel)) {
+        const text = readFileSync(new URL(rel, root), "utf8");
+        if (/grok[- ]4\.\d/i.test(text.replace(/GROK_MODEL_LABEL = "Grok 4\.\d+"/, "")))
+          offenders.push(rel);
+      }
+    }
+  };
+  walk("src/");
+  walk("python/");
+  assert.deepEqual(offenders, []);
+  // Python organs cannot import the TypeScript constant; their mirror must match it.
+  const organ = readFileSync(new URL("python/lyte_lattice/organ.py", root), "utf8");
+  assert.match(organ, new RegExp(`^GROK_MODEL_LABEL = "${DEFAULT_GROK_LABEL}"`, "m"));
 });
