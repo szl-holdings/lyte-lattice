@@ -75,9 +75,14 @@ export function clampCompleteInput(value: CompleteInput) {
     top_p: Math.min(1, Math.max(0.05, data.topP ?? 0.95)),
   };
 }
+/**
+ * xAI reasoning models (every Grok 4.x) reject `stop`, `presence_penalty` and
+ * `frequency_penalty` with an error, so none of them is ever sent. A profile's
+ * stop sequences are applied to the returned text instead (`truncateAtStop`,
+ * `stopFilter`).
+ */
 export function grokRequestBody(data: CompleteInput, stream = false, model = "grok-4.5") {
   const body: Record<string, unknown> = { model, ...clampCompleteInput(data), stream };
-  if (data.stop?.length) body.stop = data.stop;
   if (data.jsonSchema)
     body.response_format = {
       type: "json_schema",
@@ -86,6 +91,52 @@ export function grokRequestBody(data: CompleteInput, stream = false, model = "gr
   else if (data.jsonObject) body.response_format = { type: "json_object" };
   if (stream) body.stream_options = { include_usage: true };
   return body;
+}
+/** Cut text before the earliest stop sequence, as a provider-side `stop` would. */
+export function truncateAtStop(text: string, stop?: string[]): string {
+  let cut = text.length;
+  for (const s of stop ?? []) {
+    const i = s ? text.indexOf(s) : -1;
+    if (i >= 0 && i < cut) cut = i;
+  }
+  return text.slice(0, cut);
+}
+/**
+ * Streaming form of `truncateAtStop`. `push` returns the text that is safe to
+ * emit: it holds back just enough characters to recognise a stop sequence split
+ * across deltas, and returns nothing once a stop sequence has been seen. `flush`
+ * releases the held-back tail when the provider reports completion.
+ */
+export function stopFilter(stop?: string[]) {
+  const sequences = (stop ?? []).filter((s) => s.length);
+  const hold = Math.max(0, ...sequences.map((s) => s.length - 1));
+  let pending = "";
+  let stopped = false;
+  return {
+    push(chunk: string): string {
+      if (stopped) return "";
+      if (!sequences.length) return chunk;
+      pending += chunk;
+      const cut = truncateAtStop(pending, sequences);
+      if (cut.length < pending.length) {
+        stopped = true;
+        pending = "";
+        return cut;
+      }
+      let emit = Math.max(0, pending.length - hold);
+      // Never split a UTF-16 surrogate pair between two deltas.
+      const last = pending.charCodeAt(emit - 1);
+      if (emit > 0 && last >= 0xd800 && last <= 0xdbff) emit--;
+      const out = pending.slice(0, emit);
+      pending = pending.slice(emit);
+      return out;
+    },
+    flush(): string {
+      const out = stopped ? "" : pending;
+      pending = "";
+      return out;
+    },
+  };
 }
 /** Parse complete SSE events across arbitrary byte and CRLF boundaries. */
 export async function* readSseData(body: ReadableStream<Uint8Array>): AsyncGenerator<string> {
