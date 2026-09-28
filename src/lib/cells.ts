@@ -1,3 +1,5 @@
+import { DEFAULT_GROK_LABEL } from "./grok-contract";
+
 export const CELL_IDS = [
   "lyte",
   "serve",
@@ -57,9 +59,8 @@ export const CELLS: CellMeta[] = [
     n: "N1",
     title: "Serve",
     cited: "vLLM / SGLang / Ollama / TensorRT-LLM",
-    blurb:
-      "Streaming inference with four engine profiles. Completions run on Grok 4.5; the Python organ receipts the decode posture. Not a local GPU cluster.",
-    engine: "Grok 4.5 streaming + Python organ",
+    blurb: `Streaming inference with four engine profiles. Completions run on ${DEFAULT_GROK_LABEL}; the Python organ receipts the decode posture. Not a local GPU cluster.`,
+    engine: `${DEFAULT_GROK_LABEL} streaming + Python organ`,
     honesty: "LIVE",
   },
   {

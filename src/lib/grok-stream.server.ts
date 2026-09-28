@@ -1,6 +1,7 @@
 import {
   grokRequestBody,
   readSseData,
+  resolveGrokModel,
   stopFilter,
   truncateAtStop,
   validateCompleteInput,
@@ -8,21 +9,28 @@ import {
   type GrokResult,
 } from "./grok-contract.ts";
 
+/**
+ * Server-side provider configuration. `model` is null when the configured
+ * override is outside `ALLOWED_GROK_MODELS`; like a missing key, that makes the
+ * capability unavailable before any provider call.
+ */
+export type GrokServerConfig = { apiKey: string | undefined; model: string | null };
+export function grokServerConfig(env: NodeJS.ProcessEnv = process.env): GrokServerConfig {
+  return { apiKey: env.XAI_API_KEY, model: resolveGrokModel(env) };
+}
+
 /** Non-streaming completion used by the `completeGrok` server function. */
 export async function completeOnce(
   data: CompleteInput,
-  config = {
-    apiKey: process.env.XAI_API_KEY,
-    model: process.env.XAI_MODEL,
-  },
+  config: GrokServerConfig = grokServerConfig(),
 ): Promise<GrokResult> {
-  const apiKey = config.apiKey;
-  if (!apiKey) return { ok: false, error: "AI is not available in this environment" };
+  const { apiKey, model } = config;
+  if (!apiKey || !model) return { ok: false, error: "AI is not available in this environment" };
   try {
     const res = await fetch("https://api.x.ai/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify(grokRequestBody(data, false, config.model?.trim() || undefined)),
+      body: JSON.stringify(grokRequestBody(data, false, model)),
       signal: AbortSignal.timeout(60000),
     });
     if (!res.ok) {
@@ -50,13 +58,10 @@ export async function completeOnce(
 
 export async function handleComplete(
   request: Request,
-  config = {
-    apiKey: process.env.XAI_API_KEY,
-    model: process.env.XAI_MODEL,
-  },
+  config: GrokServerConfig = grokServerConfig(),
 ): Promise<Response> {
-  const apiKey = config.apiKey;
-  if (!apiKey)
+  const { apiKey, model } = config;
+  if (!apiKey || !model)
     return Response.json(
       { ok: false, error: "AI is not available in this environment" },
       { status: 503 },
@@ -74,7 +79,7 @@ export async function handleComplete(
     upstream = await fetch("https://api.x.ai/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify(grokRequestBody(data, true, config.model?.trim() || undefined)),
+      body: JSON.stringify(grokRequestBody(data, true, model)),
       signal,
     });
   } catch {

@@ -19,6 +19,9 @@ PRODUCT = "https://a-11-oy.com"
 PROOF = "https://a11oy.net"
 DOCTRINE = "v11 LOCKED"
 ORDER = "AO-2026-08-29-001"
+# Mirrors DEFAULT_GROK_LABEL in src/lib/grok-contract.ts (the TS Serve cell makes
+# the provider call; a regression test keeps the two in step).
+GROK_MODEL_LABEL = "Grok 4.7"
 
 Honesty = str  # LIVE | STRUCTURAL-ONLY | UNAVAILABLE | MEASURED | REPORTED | ROADMAP
 Status = str  # ok | warn | error | blocked
