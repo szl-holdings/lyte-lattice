@@ -8,7 +8,7 @@ export const ESTATE = {
   factory: "https://github.com/szl-holdings/a11oy-factory",
   lyteWindow: "https://github.com/szl-holdings/lyte-services",
   hub: "https://huggingface.co/SZLHOLDINGS",
-  hubSpace: "https://huggingface.co/spaces/SZLHOLDINGS/lyte-lattice",
+  hubSpace: "https://huggingface.co/spaces/SZLHOLDINGS/lyte",
   bind: "BIND_AS_A11OY_PACKAGE",
   lambda: "Conjecture 1",
   doctrine: "v11 LOCKED",

@@ -1,13 +1,14 @@
 # Hugging Face Space configuration
 
-These cards are the Space Release Compiler output. The protected repository
-workflow publishes the Dockerfile-derived payload through an exact-commit org
-deployer. Credentials remain GitHub secrets; contributors do not paste tokens
-into source.
+**This repository publishes no Hugging Face Space.** It holds no provider
+credential, and `.github/workflows/hf-deploy.yml` is a read-only authority
+verifier.
 
-| Space | Visibility | Honesty |
+| Space | State | Writer |
 | --- | --- | --- |
-| SZLHOLDINGS/lyte-lattice | public hologram | BIND_AS_A11OY_PACKAGE · RUNNING only after Hub readback |
+| `SZLHOLDINGS/lyte` | canonical Lyte Space | `szl-holdings/a11oy` `.github/workflows/hf-sync.yml` (`scripts/hf_publish_lyte_enterprise.py`, exact `lyte-services` revision) |
+| `SZLHOLDINGS/lyte-lattice` | retired standalone target, absent on the Hub | none; do not recreate it |
 
-`SZLHOLDINGS/lyte-lattice` is **BIND_AS_A11OY_PACKAGE**. It is not a second
-flagship and not a new product name. a-11-oy.com is not certified.
+`lyte-lattice.md` is the retired standalone card, kept as history. It is not
+published anywhere. Lyte is **BIND_AS_A11OY_PACKAGE**: not a second flagship and
+not a new product name. a-11-oy.com is not certified.

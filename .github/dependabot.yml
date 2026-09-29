@@ -31,7 +31,10 @@ updates:
           - "*"
 
   - package-ecosystem: "docker"
-    directory: "/"
+    # "/" and "/space" each hold a digest-pinned Dockerfile.
+    directories:
+      - "/"
+      - "/space"
     schedule:
       interval: "weekly"
       day: "monday"
