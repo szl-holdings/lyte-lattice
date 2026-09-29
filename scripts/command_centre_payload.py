@@ -33,7 +33,7 @@ LANES = [
 HUB = [
     "https://huggingface.co/SZLHOLDINGS",
     "https://huggingface.co/spaces/SZLHOLDINGS/a11oy",
-    "https://huggingface.co/spaces/SZLHOLDINGS/lyte-lattice",
+    "https://huggingface.co/spaces/SZLHOLDINGS/lyte",
     "https://huggingface.co/SZLHOLDINGS/SZL-Khipu-1.5B",
 ]
 
@@ -79,7 +79,8 @@ def publish() -> dict:
         "ok": False,
         "state": "BLOCKED",
         "reason": "Protected publisher only. This script refuses a silent Hub write even with a token. Hand the tip to the central publisher and wait for exact commit readback.",
-        "space": "SZLHOLDINGS/lyte-lattice",
+        "space": "SZLHOLDINGS/lyte",
+        "publisher": "szl-holdings/a11oy (.github/workflows/hf-sync.yml)",
         "source": "szl-holdings/lyte-lattice",
     }
 

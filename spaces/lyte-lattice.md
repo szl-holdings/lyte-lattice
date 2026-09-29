@@ -13,6 +13,10 @@ short_description: BIND hologram. N1–N25 LIVE organs. Not a flagship.
 
 # SZLHOLDINGS/lyte-lattice
 
+> **Retired (historical card).** `SZLHOLDINGS/lyte-lattice` is absent on the Hub
+> and must not be recreated. Lyte is served by `SZLHOLDINGS/lyte`, published by
+> `szl-holdings/a11oy`. Nothing publishes this card. See [README.md](README.md).
+
 BIND hologram for [szl-holdings/lyte-lattice](https://github.com/szl-holdings/lyte-lattice)
 @ `2773eba`. Product bind: [a-11-oy.com/lyte](https://a-11-oy.com/lyte).
 
