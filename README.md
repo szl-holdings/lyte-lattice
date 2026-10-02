@@ -58,7 +58,12 @@ The older `SZLHOLDINGS/lyte-lattice` standalone target and central
 The historical `.github/workflows/hf-deploy.yml` filename now holds a **read-only
 authority verifier**, not a provider writer. It checks the estate manifest,
 backend/Space ownership, and matching immutable publisher pins, then records the
-exact inspected commits. A passing authority check is **not** a runtime uptime
+exact inspected commits. The reviewed current publisher resolves one signed,
+immutable backend commit with all 17 source checks passing on that same commit.
+The verifier admits this resolver only when the publisher and entrypoint match
+their reviewed Git blobs, independently verifies the public source evidence,
+and rechecks the backend tip before recording its receipt. An unreviewed
+publisher change or incomplete evidence fails closed. A passing authority check is **not** a runtime uptime
 or byte-parity claim; those require the canonical publisher's live evidence.
 
 ## Named frontiers
