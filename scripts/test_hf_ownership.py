@@ -4,6 +4,7 @@
 import copy
 import importlib.util
 from pathlib import Path
+import sys
 import unittest
 from unittest.mock import patch
 
@@ -171,6 +172,33 @@ class DynamicOwnershipContract(OwnershipContract):
         with self.assertRaises(owner.ContractError):
             owner.validate(self.alignment, self.publisher, self.entry, self.workflow,
                 self.caller, self.readme, source_head=self.head, source_checks=self.checks)
+    def test_cli_rejects_unreviewed_bytes_before_evidence_or_receipt(self):
+        original_publisher, original_entry = self.publisher, self.entry
+        inputs = {'alignment.v1.json': '{}', 'hf-sync.yml': self.workflow,
+                  'hf-deploy.yml': self.caller, 'README.md': self.readme}
+        for changed in ('publisher', 'entrypoint'):
+            with self.subTest(changed=changed):
+                inputs['hf_publish_lyte_enterprise.py'] = original_publisher + (
+                    '\n# unreviewed publisher\n' if changed == 'publisher' else '')
+                inputs['hf_publish_vertical_flagships_v4.py'] = original_entry + (
+                    '\n# unreviewed entrypoint\n' if changed == 'entrypoint' else '')
+                with patch.object(owner, 'DYNAMIC_PUBLISHER_BLOB', self.admitted_publisher), \
+                        patch.object(owner, 'DYNAMIC_ENTRYPOINT_BLOB', self.admitted_entrypoint), \
+                        patch.object(sys, 'argv', ['verify-hf-ownership.py', '--source', 'source',
+                            '--governance', 'governance', '--publisher', 'publisher',
+                            '--output', 'evidence/receipt.json']), \
+                        patch.object(Path, 'read_text', autospec=True,
+                            side_effect=lambda path, **kwargs: inputs[path.name]), \
+                        patch.object(owner, 'read_source_evidence') as evidence, \
+                        patch.object(owner, 'revision') as checkout, \
+                        patch.object(Path, 'mkdir') as mkdir, \
+                        patch.object(Path, 'write_text') as receipt:
+                    with self.assertRaisesRegex(owner.ContractError, 'reviewed exact Git blobs'):
+                        owner.main()
+                    evidence.assert_not_called()
+                    checkout.assert_not_called()
+                    mkdir.assert_not_called()
+                    receipt.assert_not_called()
     def test_source_evidence_is_required_even_for_reviewed_dynamic_bytes(self):
         with patch.object(owner, 'DYNAMIC_PUBLISHER_BLOB', self.admitted_publisher), \
                 patch.object(owner, 'DYNAMIC_ENTRYPOINT_BLOB', self.admitted_entrypoint), \

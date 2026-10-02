@@ -20,9 +20,10 @@ SOURCE_REQUIRED_CHECKS = (
     'responsive-overflow', 'bundle-budget', 'container-build', 'container-smoke',
     'source-binding',
 )
-# Reviewed immutable a11oy@65c0a2cfd96d1171f6f5ba828d67a0228390b6d3 blobs.
+# Reviewed immutable a11oy@88ab7ab539c779f2a026bdd6cff5193a950289c6 blobs.
+# Publisher pins the reviewed controller 10cb5f7665ab5469c876c3418888a71f521fd76b.
 # A new publisher/resolver or entrypoint requires a separate authority review.
-DYNAMIC_PUBLISHER_BLOB = '79b9890234cebb26a721d8eafd9a028db56161b5'
+DYNAMIC_PUBLISHER_BLOB = '0dfd432f5311cd6c5ed3999b7ee5dab98bbffd48'
 DYNAMIC_ENTRYPOINT_BLOB = 'cdbe1577313c138d9cf8af294509e6c502d67a5b'
 
 class ContractError(ValueError):
