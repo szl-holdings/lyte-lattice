@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Offline authority tests: no credentials, provider writes or network."""
 import copy
+import hashlib
 import importlib.util
 from pathlib import Path
 import unittest
@@ -19,20 +20,25 @@ class OwnershipContract(unittest.TestCase):
             'hub_alias_policy': {'duplicate_authority_spaces_forbidden': True, 'canonical_public_space_slugs': ['lyte']}}
         self.publisher = '\n'.join([
             'SOURCE_REPOSITORY = "szl-holdings/lyte-services"',
-            'SOURCE_REVISION = "' + 'a' * 40 + '"',
+            'SOURCE_VARIABLE = "LYTE_SOURCE_REVISION"',
             'HF_REPOSITORY = "SZLHOLDINGS/lyte"',
             'ORIGIN = "https://szlholdings-lyte.hf.space"'])
-        self.entry = 'LYTE_SOURCE_REVISION = "' + 'a' * 40 + '"\nSOURCE_OWNED_FLAGSHIP_SLUGS = ("lyte",)\nLYTE_IMPL = HERE / "hf_publish_lyte_enterprise.py"'
+        self.reviewed_publisher_sha256 = hashlib.sha256(self.publisher.encode()).hexdigest()
+        self.entry = 'SOURCE_OWNED_FLAGSHIP_SLUGS = ("lyte",)\nLYTE_IMPL = HERE / "hf_publish_lyte_enterprise.py"'
         self.workflow = 'run: python scripts/hf_publish_vertical_flagships_v4.py'
         self.caller = 'permissions:\n  contents: read\n'
         self.readme = '---\nshort_description: "Lyte package: canonical runtime"\n---\n'
     def run_contract(self):
-        return owner.validate(self.alignment, self.publisher, self.entry, self.workflow, self.caller, self.readme)
+        return owner.validate(self.alignment, self.publisher, self.entry, self.workflow,
+                              self.caller, self.readme, self.reviewed_publisher_sha256)
     def test_current_authority_is_delegated_without_uptime_or_write_claim(self):
         result = self.run_contract()
         self.assertEqual(result['state'], 'DELEGATED')
         self.assertEqual(result['hub_surface'], 'SZLHOLDINGS/lyte')
         self.assertEqual(result['publisher_repository'], 'szl-holdings/a11oy')
+        self.assertIsNone(result['backend_source_revision'])
+        self.assertEqual(result['backend_source_resolution'], 'VERIFIED_CURRENT_MAIN_AT_PUBLICATION')
+        self.assertEqual(result['reviewed_publisher_sha256'], self.reviewed_publisher_sha256)
         for key in ('provider_writes', 'provider_credentials_local', 'runtime_observed', 'retired_space_recreated'):
             self.assertIs(result[key], False)
     def test_retired_target_rejected(self):
@@ -41,12 +47,21 @@ class OwnershipContract(unittest.TestCase):
     def test_presentation_must_not_be_the_runtime_source(self):
         self.alignment['public_bodies'][0]['backend_source'] = 'szl-holdings/lyte-lattice'
         with self.assertRaises(owner.ContractError): self.run_contract()
-    def test_moving_reference_rejected(self):
-        self.publisher = self.publisher.replace('a' * 40, 'main')
+    def test_changed_publisher_bytes_rejected(self):
+        self.publisher += '\n# unreviewed change'
         with self.assertRaises(owner.ContractError): self.run_contract()
-    def test_mismatched_source_pins_rejected(self):
-        self.entry = self.entry.replace('a' * 40, 'b' * 40)
+    def test_stale_static_source_pin_rejected(self):
+        self.entry += '\nLYTE_SOURCE_REVISION = "' + 'a' * 40 + '"'
         with self.assertRaises(owner.ContractError): self.run_contract()
+    def test_wrong_source_variable_rejected(self):
+        self.publisher = self.publisher.replace('SOURCE_VARIABLE = "LYTE_SOURCE_REVISION"',
+                                                'SOURCE_VARIABLE = "main"')
+        self.reviewed_publisher_sha256 = hashlib.sha256(self.publisher.encode()).hexdigest()
+        with self.assertRaises(owner.ContractError): self.run_contract()
+    def test_unreviewed_publisher_rejected_by_default_digest(self):
+        with self.assertRaisesRegex(owner.ContractError, 'reviewed source bytes'):
+            owner.validate(self.alignment, self.publisher, self.entry,
+                           self.workflow, self.caller, self.readme)
     def test_generic_shell_must_not_replace_the_source_owned_runtime(self):
         self.entry = self.entry.replace('("lyte",)', '()')
         with self.assertRaises(owner.ContractError): self.run_contract()

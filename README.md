@@ -50,15 +50,18 @@ broker, a GPU cluster, or a Hub-certified trainer.
 
 A11oy's `scripts/hf_publish_vertical_flagships_v4.py` delegates Lyte to
 `scripts/hf_publish_lyte_enterprise.py`. That publisher binds an exact
-`lyte-services` revision and publishes the existing `SZLHOLDINGS/lyte` Space.
+verified `lyte-services` main revision at publication time and publishes the
+existing `SZLHOLDINGS/lyte` Space.
 The source-owned Python runtime must not be replaced by a generic generated shell.
 
 The older `SZLHOLDINGS/lyte-lattice` standalone target and central
 `publish-operator-spaces.yml` lane are retired. Do not recreate them.
 The historical `.github/workflows/hf-deploy.yml` filename now holds a **read-only
 authority verifier**, not a provider writer. It checks the estate manifest,
-backend/Space ownership, and matching immutable publisher pins, then records the
-exact inspected commits. A passing authority check is **not** a runtime uptime
+backend/Space ownership, and the exact reviewed A11oy publisher bytes, then
+records the exact inspected commits. The backend revision is selected by the
+publisher after verifying the current source commit and its required checks.
+A passing authority check is **not** a runtime uptime
 or byte-parity claim; those require the canonical publisher's live evidence.
 
 ## Named frontiers

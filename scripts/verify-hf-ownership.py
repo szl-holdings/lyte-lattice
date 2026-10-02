@@ -12,6 +12,9 @@ from pathlib import Path
 from typing import Any
 
 SHA40 = re.compile(r'^[0-9a-f]{40}$')
+# Reviewed A11oy publisher from szl-holdings/a11oy#2342. A change to its
+# source-selection or write logic requires a new authority review here.
+REVIEWED_PUBLISHER_SHA256 = 'ae9fef2f30c3a601f7bbbc0a33cf2e53ec1a7ef8c9061d79868509222e90be44'
 
 class ContractError(ValueError):
     """A publication authority or exact-source invariant is missing."""
@@ -57,7 +60,8 @@ def validate_caller(text: str) -> None:
         raise ContractError('Presentation caller must not own a provider credential or write lane')
 
 def validate(alignment: dict, publisher: str, entrypoint: str, workflow: str,
-             caller: str, readme: str) -> dict:
+             caller: str, readme: str,
+             reviewed_publisher_sha256: str = REVIEWED_PUBLISHER_SHA256) -> dict:
     validate_card(readme)
     validate_caller(caller)
     if alignment.get('schema') != 'szl.estate.alignment/v1':
@@ -75,19 +79,23 @@ def validate(alignment: dict, publisher: str, entrypoint: str, workflow: str,
     entry = constants(entrypoint)
     if owner.get('SOURCE_REPOSITORY') != expected['backend_source'] or owner.get('HF_REPOSITORY') != expected['hub_surface']:
         raise ContractError('Publisher does not target the admitted backend and Space')
-    revision = owner.get('SOURCE_REVISION')
-    if not isinstance(revision, str) or not SHA40.fullmatch(revision):
-        raise ContractError('Backend revision must be an immutable Git commit')
-    if entry.get('LYTE_SOURCE_REVISION') != revision:
-        raise ContractError('Vertical entrypoint and Lyte source pins disagree')
+    publisher_sha256 = hashlib.sha256(publisher.encode('utf-8')).hexdigest()
+    if publisher_sha256 != reviewed_publisher_sha256:
+        raise ContractError('Canonical publisher differs from reviewed source bytes')
+    if owner.get('SOURCE_VARIABLE') != 'LYTE_SOURCE_REVISION' or 'SOURCE_REVISION' in owner:
+        raise ContractError('Publisher must bind the verified current source revision at publication')
+    if 'LYTE_SOURCE_REVISION' in entry:
+        raise ContractError('Vertical entrypoint retains a stale static Lyte source pin')
     if entry.get('SOURCE_OWNED_FLAGSHIP_SLUGS') != ('lyte',):
         raise ContractError('Lyte must remain source-owned, not a generic generated shell')
     if 'hf_publish_lyte_enterprise.py' not in entrypoint or 'hf_publish_vertical_flagships_v4.py' not in workflow:
         raise ContractError('Canonical workflow no longer invokes the owned publisher')
     if owner.get('ORIGIN') != 'https://szlholdings-lyte.hf.space':
         raise ContractError('Unexpected runtime origin')
-    return {'schema': 'szl.lyte.canonical-delegation/v2', 'state': 'DELEGATED',
-            **expected, 'backend_source_revision': revision,
+    return {'schema': 'szl.lyte.canonical-delegation/v3', 'state': 'DELEGATED',
+            **expected, 'backend_source_revision': None,
+            'backend_source_resolution': 'VERIFIED_CURRENT_MAIN_AT_PUBLICATION',
+            'reviewed_publisher_sha256': publisher_sha256,
             'publisher_repository': 'szl-holdings/a11oy',
             'publisher_workflow': '.github/workflows/hf-sync.yml',
             'publisher_entrypoint': 'scripts/hf_publish_vertical_flagships_v4.py',
