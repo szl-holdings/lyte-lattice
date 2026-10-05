@@ -15,11 +15,17 @@ function eventBlock(name) {
   return match[1];
 }
 
-test("every main update schedules exact-tip publication", () => {
+test("every main update schedules read-only ownership verification", () => {
   const push = eventBlock("push");
   assert.match(push, /^    branches: \[main\]$/m);
   assert.doesNotMatch(push, /^    paths(?:-ignore)?:/m);
-  assert.match(WORKFLOW, /^      require-default-branch-tip: true$/m);
+  assert.match(WORKFLOW, /^permissions:\n  contents: read$/m);
+  assert.match(WORKFLOW, /run: python -I source\/scripts\/test_hf_ownership\.py/);
+  assert.match(WORKFLOW, /python -I source\/scripts\/verify-hf-ownership\.py/);
+  assert.match(WORKFLOW, /--source source --governance governance --publisher publisher/);
+  assert.match(WORKFLOW, /repository: szl-holdings\/a11oy/);
+  assert.doesNotMatch(WORKFLOW, /reusable-hf-deploy\.yml|require-default-branch-tip|\bHF_[A-Z_]+\b/);
+  assert.doesNotMatch(WORKFLOW, /\b(?:upload_folder|upload_file|create_repo|restart_space|pause_space)\s*\(/);
 });
 
 test("pull request validation remains narrowly path-scoped", () => {

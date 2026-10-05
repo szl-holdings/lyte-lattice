@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import { handOver, parseWriteAtomicArgs, stagingError } from "./write-atomic.mjs";
@@ -164,27 +164,44 @@ test("cli: relative paths follow the script's root, not the caller's cwd", () =>
   assert.equal(existsSync(join(root, "public/og.jpg")), false);
 });
 
-test("every hand-over the og skill prints is one this script accepts", () => {
-  // The card and banner recipes live in the skill's references/, not SKILL.md.
-  const skillDir = join(TEMPLATE_ROOT, ".grok/skills/og");
-  const docs = [
-    join(skillDir, "SKILL.md"),
-    ...readdirSync(join(skillDir, "references")).map((f) => join(skillDir, "references", f)),
-  ];
-  const invocations = docs.flatMap(
-    (path) => readFileSync(path, "utf8").match(/node scripts\/write-atomic\.mjs[^\n`]*/g) ?? [],
-  );
-  assert.ok(invocations.length >= 3, "og.jpg, x-banner.jpg and site.json each hand over");
+const readBrandDoc = () => readFileSync(join(TEMPLATE_ROOT, "docs/brand-assets.md"), "utf8");
+
+function assertDocumentedHandovers(doc) {
+  const invocations = doc.match(/node scripts\/write-atomic\.mjs[^\n`]*/g) ?? [];
+  const targets = [];
   for (const line of invocations) {
     const argv = line.replace("node scripts/write-atomic.mjs", "").trim().split(/\s+/);
     const args = parseWriteAtomicArgs(argv);
     assert.equal(args.error, undefined, line);
+    // Match the CLI's root-relative resolution before testing public/ exclusion.
+    const staged = resolve(TEMPLATE_ROOT, args.staged);
+    const target = resolve(TEMPLATE_ROOT, args.target);
     assert.equal(
-      stagingError({ staged: args.staged, target: args.target, publicDir: "/workspace/public" }),
+      stagingError({ staged, target, publicDir: join(TEMPLATE_ROOT, "public") }),
       null,
       line,
     );
+    assert.equal(dirname(staged), join(TEMPLATE_ROOT, ".grok"), "stage on the application's filesystem");
+    targets.push(target);
   }
+  assert.deepEqual(targets.sort(), ["public/og.jpg", "public/x-banner.jpg", "src/lib/og/site.json"]
+    .map((path) => resolve(TEMPLATE_ROOT, path)).sort(), "all three assets need an atomic handover");
+}
+
+test("application documentation gives safe atomic handovers for all brand assets", () => {
+  assertDocumentedHandovers(readBrandDoc());
+});
+
+test("documentation refuses public staging, no-op moves and omitted handovers", () => {
+  const doc = readBrandDoc();
+  assert.throws(() => assertDocumentedHandovers(doc.replace(".grok/og.jpg.tmp", "public/og.jpg.tmp")));
+  assert.throws(() => assertDocumentedHandovers(doc.replace(".grok/og.jpg.tmp", "public/og.jpg")));
+  assert.throws(() => assertDocumentedHandovers(doc.replace(".grok/og.jpg.tmp", "../other/og.jpg.tmp")));
+  assert.throws(() => assertDocumentedHandovers(doc.replace(
+    "node scripts/write-atomic.mjs .grok/x-banner.jpg.tmp public/x-banner.jpg", "")));
+  assert.throws(() => assertDocumentedHandovers(doc.replace(
+    "node scripts/write-atomic.mjs .grok/og.jpg.tmp public/og.jpg",
+    "node scripts/write-atomic.mjs .grok/og.jpg.tmp public/og.jpg unexpected")));
 });
 
 test("cli: a missing staged file fails without touching the target", () => {
