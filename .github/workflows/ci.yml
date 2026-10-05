@@ -16,8 +16,8 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: npm
       - run: npm ci
-      - name: Verify completion requests and streaming failures
+      - name: Verify offline script, auth, connector, and completion contracts
         if: matrix.node-version == '22'
-        run: node --experimental-strip-types --test src/lib/grok-contract.test.ts src/lib/completion-history.test.ts
+        run: npm test
       - name: Build (vite, development mode — no database dependency)
         run: npm run build:dev
