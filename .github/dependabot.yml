@@ -25,6 +25,11 @@ updates:
     labels:
       - "dependencies"
     open-pull-requests-limit: 5
+    # typescript-eslint 8.x supports TypeScript <6.1.0.
+    # Admit a new compiler major only with a compatible parser migration.
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     groups:
       npm:
         patterns:
