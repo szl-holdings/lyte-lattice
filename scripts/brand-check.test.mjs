@@ -329,11 +329,14 @@ function assertNoOptionalWait(doc) {
   const rest = doc.slice(start + heading.length);
   const end = rest.search(/\n## /);
   const prose = (end === -1 ? rest : rest.slice(0, end)).replace(/[`*]/g, "").replace(/\s+/g, " ");
-  const mentions = [...prose.matchAll(/\bwait\b/gi)];
+  const mentions = [...prose.matchAll(/\b(?:wait|wait_tasks|get_task_output)\b/gi)];
   assert.ok(mentions.length > 0, "optional generation must not block unrelated work");
+  // A negation can cover a list of wait tools, but not an independent instruction.
+  const connectors = /(?:\s|[/,;]|\band\b|\bor\b|\bwait\b|\bwait_tasks\b|\bget_task_output\b)+$/i;
   for (const match of mentions) {
-    assert.match(prose.slice(0, match.index).trimEnd(), /\b(?:never|not|don['’]t)$/i,
-      "optional generation section must not instruct a wait");
+    const before = prose.slice(0, match.index).replace(connectors, "");
+    assert.match(before, /\b(?:no|never|not|don['’]t)$/i,
+      `optional generation section must not instruct ${match[0]}`);
   }
 }
 
@@ -346,6 +349,34 @@ test("an affirmative wait instruction fails even beside an existing prohibition"
   assert.throws(() => assertNoOptionalWait(doc.replace("Do not wait", "Wait")));
   assert.throws(() => assertNoOptionalWait(doc.replace("## Self-check", "Wait for optional brand generation.\n\n## Self-check")));
   assert.throws(() => assertNoOptionalWait(doc.replace("Do not wait", "Continue")));
+});
+
+for (const tool of ["wait_tasks", "get_task_output"]) {
+  test(`an affirmative ${tool} instruction fails beside an existing prohibition`, () => {
+    const doc = readBrandDoc();
+    assert.throws(() => assertNoOptionalWait(doc.replace(
+      "## Self-check", `Run ${tool} before final verification.\n\n## Self-check`,
+    )));
+  });
+}
+
+test("optional generation permits tool lists only under shared negation", () => {
+  const doc = readBrandDoc();
+  for (const instruction of [
+    "Never wait_tasks or get_task_output for optional brand generation.",
+    "Do not wait_tasks / get_task_output for optional brand generation.",
+    "Do not wait, wait_tasks, or get_task_output for optional brand generation.",
+  ]) {
+    assertNoOptionalWait(doc.replace("## Self-check", `${instruction}\n\n## Self-check`));
+  }
+  for (const instruction of [
+    "Run wait_tasks, but never get_task_output before final verification.",
+    "Never wait_tasks, but run get_task_output before final verification.",
+  ]) {
+    assert.throws(() => assertNoOptionalWait(doc.replace(
+      "## Self-check", `${instruction}\n\n## Self-check`,
+    )));
+  }
 });
 
 function assertSelfChecks(doc) {
