@@ -91,6 +91,8 @@ npm ci
 npm run dev
 # Compile the presentation without a database migration:
 npm run build:dev
+# Complete offline regression suite (Node 22.6+):
+npm test
 # Offline authority regression tests:
 python scripts/test_hf_ownership.py
 ```
@@ -98,6 +100,12 @@ python scripts/test_hf_ownership.py
 Optional completion integrations use server-side configuration. An absent key
 is an unavailable capability, never a mock success. Keep credentials out of
 source, browser bundles, and evidence receipts.
+
+`npm test` discovers script tests without shell globs and also runs the auth,
+connector, completion-request and streaming suites. Missing suites and child
+process failures fail the command. CI runs this complete suite on Node 22;
+the build matrix remains Node 20 and 22. Brand asset maintenance is documented
+in [docs/brand-assets.md](docs/brand-assets.md).
 
 Set `XAI_API_KEY` on the application server to use the completion integration.
 The model is pinned to `grok-4.7` (`DEFAULT_GROK_MODEL` in

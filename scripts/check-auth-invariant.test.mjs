@@ -1,7 +1,5 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtempSync, symlinkSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { promisify } from "node:util";
@@ -12,7 +10,7 @@ import {
   compareAuthInvariant,
   probeDevAuthEnabled,
 } from "./check-auth-invariant.mjs";
-import { projectRoot } from "./with-app-env.mjs";
+import { aliasScripts, appEnvProcessEnv, makeAppEnvWorkspace } from "./test-support/app-env-fixture.mjs";
 
 /**
  * The JSON body `/__app-env` would serve. Do not start a real Vite server —
@@ -90,21 +88,33 @@ test("only a divergence warns the smoke verdict", () => {
   }
 });
 
-test("the build side resolves the template's shipped app-env", () => {
-  assert.equal(buildAuthEnabled(projectRoot(), {}), false);
-  assert.equal(buildAuthEnabled(projectRoot(), { VITE_AUTH_ENABLED: "true" }), true);
+test("the build side resolves an explicit workspace app-env and override", (t) => {
+  const root = makeAppEnvWorkspace(t, '{"VITE_AUTH_ENABLED":"false"}');
+  assert.equal(buildAuthEnabled(root, {}), false);
+  assert.equal(buildAuthEnabled(root, { VITE_AUTH_ENABLED: "true" }), true);
 });
 
-test("the CLI reports rather than silently passing when run via a symlink", async () => {
+test("the build side keeps auth on for absent or malformed workspace flags", (t) => {
+  for (const document of [undefined, "not json", '{"VITE_AUTH_ENABLED":false}']) {
+    assert.equal(buildAuthEnabled(makeAppEnvWorkspace(t, document), {}), true);
+  }
+});
+
+test("the build side preserves an explicit false override", (t) => {
+  const root = makeAppEnvWorkspace(t, '{"VITE_AUTH_ENABLED":"true"}');
+  assert.equal(buildAuthEnabled(root, { VITE_AUTH_ENABLED: "false" }), false);
+});
+
+test("the CLI reports rather than silently passing when run via a directory alias", async (t) => {
   // A check whose exit code is the whole signal must never no-op to 0 because
   // process.argv[1] came in through a symlinked path.
-  const link = join(mkdtempSync(join(tmpdir(), "auth-invariant-link-")), "scripts");
-  symlinkSync(join(projectRoot(), "scripts"), link);
+  const root = makeAppEnvWorkspace(t);
+  const link = aliasScripts(root);
   const error = await promisify(execFile)(process.execPath, [
     join(link, "check-auth-invariant.mjs"),
     "--dev-url",
     "http://127.0.0.1:1",
-  ]).catch((err) => err);
+  ], { env: appEnvProcessEnv() }).catch((err) => err);
   assert.equal(error.code, 2);
   assert.match(error.stderr, /could not read the dev server's resolved VITE_AUTH_ENABLED/);
 });
