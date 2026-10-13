@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: Apache-2.0
 """Offline authority tests: no credentials, provider writes or network."""
+import contextlib
 import copy
 import importlib.util
+import json
 from pathlib import Path
 import sys
 import unittest
@@ -94,29 +96,159 @@ class OwnershipContract(unittest.TestCase):
             with self.subTest(text=text), self.assertRaises(owner.ContractError):
                 owner.validate_caller(text)
 
+# Independent inventory of the reviewed a11oy estate-route execution closure.
+# Literal on purpose: it is never derived from the production registry it checks.
+EXPECTED_PUBLISHER = 'scripts/hf_publish_lyte_enterprise.py'
+EXPECTED_ENTRYPOINT = 'scripts/hf_publish_vertical_flagships_v4.py'
+EXPECTED_WORKFLOW = '.github/workflows/hf-sync.yml'
+EXPECTED_DEPENDENCIES = (
+    '.github/workflows/hf-sync.yml',
+    'scripts/szl_release_guard.py',
+    'scripts/lyte_enterprise_live_contract.py',
+    'scripts/hf_existing_space_guard.py',
+    'scripts/hf_exact_main_ownership.py',
+    'scripts/estate_repair_dispatch.py',
+    'scripts/estate_child_completion.py',
+    'scripts/hf_publish_vertical_flagships_v4_impl.py',
+    'scripts/_hf_publish_vertical_flagships_v4_impl_base.py',
+    'scripts/hf_finance_read_proxy.py',
+    'scripts/hf_flagship_runtime_contract.py',
+    'scripts/hf_finance_workspace.py',
+    'scripts/hf_finance_research_workspace.py',
+    'scripts/hf_finance_signed_workspace.py',
+    'scripts/hf_finance_functional_gate.py',
+    'scripts/hf_finance_projection_manifest.py',
+    'scripts/hf_publish_vertical_services_intelligence_v4.py',
+    'scripts/hf_publish_vertical_services_frontier_v3.py',
+    'scripts/hf_publish_vertical_services.py',
+)
+EXPECTED_WORKFLOW_ROOTS = (
+    'scripts/estate_child_completion.py',
+    'scripts/estate_repair_dispatch.py',
+    'scripts/hf_exact_main_ownership.py',
+    'scripts/hf_publish_vertical_flagships_v4.py',
+)
+EXPECTED_CODE = tuple(sorted({EXPECTED_PUBLISHER, EXPECTED_ENTRYPOINT,
+                              *EXPECTED_DEPENDENCIES} - {EXPECTED_WORKFLOW}))
+HEADER = 'from pathlib import Path\nHERE = Path(__file__).resolve().parent\n'
+
+
+def sibling(name):
+    return f'Path(__file__).with_name("{name}")'
+
+
+def synthetic_sources():
+    """Inert stand-ins with the reviewed reference shapes; never real publisher code."""
+    sources = {path: f'# inert reviewed fixture: {path}\n'
+               for path in EXPECTED_DEPENDENCIES if path != EXPECTED_WORKFLOW}
+    sources['scripts/hf_publish_vertical_flagships_v4_impl.py'] = (
+        'import importlib.util\nfrom pathlib import Path\n'
+        f'BASE = {sibling("_hf_publish_vertical_flagships_v4_impl_base.py")}\n'
+        + ''.join(f'_spec = importlib.util.spec_from_file_location("m", {sibling(name)})\n'
+                  for name in ('hf_finance_read_proxy.py', 'hf_flagship_runtime_contract.py',
+                               'hf_finance_workspace.py', 'hf_finance_functional_gate.py',
+                               'hf_finance_projection_manifest.py')))
+    sources['scripts/_hf_publish_vertical_flagships_v4_impl_base.py'] = (
+        'from pathlib import Path\nfrom huggingface_hub import HfApi\n'
+        'ROOT = Path(__file__).resolve().parents[1]\n'
+        'BUNDLE = ROOT / "deployments" / "fixture"\n'
+        'SPACE_FILES = ("app.py", "Dockerfile")\n'
+        'def page():\n    return (BUNDLE / "index.html").read_text()\n')
+    sources['scripts/hf_finance_workspace.py'] = (
+        'import importlib.util\nfrom pathlib import Path\n'
+        f'_a = importlib.util.spec_from_file_location("a", {sibling("hf_finance_research_workspace.py")})\n'
+        f'_b = importlib.util.spec_from_file_location("b", {sibling("hf_finance_signed_workspace.py")})\n')
+    sources['scripts/hf_finance_functional_gate.py'] = (
+        'import importlib.util\nfrom pathlib import Path\n'
+        'def projection():\n'
+        f'    return importlib.util.spec_from_file_location("p", {sibling("hf_finance_read_proxy.py")})\n')
+    sources['scripts/hf_publish_vertical_services_intelligence_v4.py'] = (
+        HEADER + 'V3_IMPL = HERE / "hf_publish_vertical_services_frontier_v3.py"\n')
+    sources['scripts/hf_publish_vertical_services_frontier_v3.py'] = (
+        'import importlib.util\n' + HEADER + 'BASE_IMPL = HERE / "hf_publish_vertical_services.py"\n'
+        'def load():\n    return importlib.util.spec_from_file_location("b", BASE_IMPL)\n')
+    sources['scripts/hf_publish_vertical_services.py'] = (
+        'import subprocess\nimport sys\nfrom pathlib import Path\n'
+        'def deploy(td):\n'
+        '    controller = Path(td) / "hf_deploy_from_dockerfile.py"\n'
+        '    subprocess.run([sys.executable, "-m", "pip", "--version"], check=False)\n'
+        '    return controller\n')
+    return sources
+
+
+SYNTHETIC_WORKFLOW = '''name: inert synthetic publisher workflow
+on: workflow_dispatch
+permissions:
+  contents: read
+env:
+  CANONICAL_SPACE: SZLHOLDINGS/a11oy
+jobs:
+  unrelated:
+    runs-on: ubuntu-latest
+    steps:
+      - run: python -I -B scripts/unrelated_fixture_tool.py
+  publish-vertical-flagships:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - run: python3 -I -B scripts/hf_exact_main_ownership.py --receipt "$RUNNER_TEMP/owner.json"
+      - run: python -I -B scripts/estate_repair_dispatch.py > "$RUNNER_TEMP/plan.json"
+      - run: python -I -m pip install "huggingface_hub==1.31.0"
+      - run: python -I -B scripts/hf_publish_vertical_flagships_v4.py
+      - run: python -I -B scripts/estate_child_completion.py
+'''
+
+SYNTHETIC_ENTRYPOINT = '''import os
+from pathlib import Path
+HERE = Path(__file__).resolve().parent
+SOURCE_OWNED_FLAGSHIP_SLUGS = ("lyte",)
+FLAGSHIP_IMPL = HERE / "hf_publish_vertical_flagships_v4_impl.py"
+LYTE_IMPL = HERE / "hf_publish_lyte_enterprise.py"
+COMBINED_IMPL = HERE / "hf_publish_vertical_services_intelligence_v4.py"
+SPACE_GUARD_IMPL = HERE / "hf_existing_space_guard.py"
+RELEASE_GUARD_IMPL = HERE / "szl_release_guard.py"
+def main():
+    return os.environ.get("SZL_FLAGSHIP_SCOPE", "estate")
+'''
+
+
 class DynamicOwnershipContract(OwnershipContract):
     """Fixture hashes test dispatch; production hashes bind reviewed real blobs."""
     def setUp(self):
         super().setUp()
         self.publisher = self.publisher.replace('SOURCE_REVISION = "' + 'a' * 40 + '"',
             'SOURCE_VARIABLE = "LYTE_SOURCE_REVISION"\nSOURCE_REQUIRED_CHECKS = ' + repr(REQUIRED_CHECKS))
-        self.entry = self.entry.replace('LYTE_SOURCE_REVISION = "' + 'a' * 40 + '"\n', '')
-        self.admitted_publisher = owner.git_blob(self.publisher)
-        self.admitted_entrypoint = owner.git_blob(self.entry)
-        self.dependencies = {path: '# reviewed fixture: ' + path + '\n'
-                             for path in owner.DYNAMIC_DEPENDENCY_BLOBS}
-        self.dependencies['.github/workflows/hf-sync.yml'] = self.workflow
-        self.admitted_dependencies = {path: owner.git_blob(text)
-                                      for path, text in self.dependencies.items()}
+        self.publisher = ('from pathlib import Path\nfrom szl_release_guard import run_bounded\n'
+            + self.publisher + '\nCONTRACT_PATH = Path(__file__).resolve().with_name('
+            '"lyte_enterprise_live_contract.py")\ndef controller(td):\n'
+            '    return Path(td) / "controller.py"\n')
+        self.entry = SYNTHETIC_ENTRYPOINT
+        self.workflow = SYNTHETIC_WORKFLOW
+        self.dependencies = {path: text for path, text in synthetic_sources().items()}
+        self.dependencies[EXPECTED_WORKFLOW] = self.workflow
+        self.admit()
         self.head = {'sha': 'a' * 40, 'commit': {'verification': {'verified': True}}}
         self.checks = {'total_count': len(REQUIRED_CHECKS), 'check_runs': [
             {'name': name, 'head_sha': 'a' * 40, 'status': 'completed',
              'conclusion': 'success', 'app': {'slug': 'github-actions'}}
             for name in REQUIRED_CHECKS]}
+    def admit(self):
+        """Admit the current fixture bytes, as a reviewed registry update would."""
+        self.admitted_publisher = owner.git_blob(self.publisher)
+        self.admitted_entrypoint = owner.git_blob(self.entry)
+        self.admitted_dependencies = {path: owner.git_blob(text)
+                                      for path, text in self.dependencies.items()}
+    def set_workflow(self, text):
+        self.workflow = text
+        self.dependencies[EXPECTED_WORKFLOW] = text
+        self.admit()
+    def registry(self):
+        return (patch.object(owner, 'DYNAMIC_PUBLISHER_BLOB', self.admitted_publisher),
+                patch.object(owner, 'DYNAMIC_ENTRYPOINT_BLOB', self.admitted_entrypoint),
+                patch.object(owner, 'DYNAMIC_DEPENDENCY_BLOBS', self.admitted_dependencies))
     def run_contract(self):
-        with patch.object(owner, 'DYNAMIC_PUBLISHER_BLOB', self.admitted_publisher), \
-                patch.object(owner, 'DYNAMIC_ENTRYPOINT_BLOB', self.admitted_entrypoint), \
-                patch.object(owner, 'DYNAMIC_DEPENDENCY_BLOBS', self.admitted_dependencies):
+        first, second, third = self.registry()
+        with first, second, third:
             return owner.validate(self.alignment, self.publisher, self.entry, self.workflow,
                 self.caller, self.readme, source_head=self.head, source_checks=self.checks,
                 publisher_dependencies=self.dependencies)
@@ -167,95 +299,44 @@ class DynamicOwnershipContract(OwnershipContract):
                 self.checks['total_count'] = count
                 self.run_contract()
     def test_changed_publisher_or_entrypoint_fails_closed(self):
-        original = self.publisher
-        for addition in ('\n# unreviewed publisher change\n', '\nSOURCE_VARIABLE = "OTHER"\n'):
-            with self.subTest(addition=addition), self.assertRaises(owner.ContractError):
-                self.publisher = original + addition
+        original_publisher, original_entry = self.publisher, self.entry
+        for name, change in (('publisher', lambda text: text + '\n# unreviewed publisher change\n'),
+                             ('publisher', lambda text: text + '\nSOURCE_VARIABLE = "OTHER"\n'),
+                             ('publisher', lambda text: text.replace('\n', '\r\n')),
+                             ('entrypoint', lambda text: text + '\n# unreviewed entrypoint change\n'),
+                             ('entrypoint', lambda text: text.replace('\n', '\r\n'))):
+            with self.subTest(name=name), self.assertRaisesRegex(owner.ContractError, 'reviewed exact Git blobs'):
+                self.publisher, self.entry = original_publisher, original_entry
+                if name == 'publisher': self.publisher = change(self.publisher)
+                else: self.entry = change(self.entry)
                 self.run_contract()
-        self.publisher = original
-        self.entry += '\n# unreviewed entrypoint change\n'
-        with self.assertRaises(owner.ContractError): self.run_contract()
     def test_declaring_a_resolver_without_reviewed_bytes_is_rejected(self):
         with self.assertRaises(owner.ContractError):
             owner.validate(self.alignment, self.publisher, self.entry, self.workflow,
                 self.caller, self.readme, source_head=self.head, source_checks=self.checks,
                 publisher_dependencies=self.dependencies)
-    def test_cli_rejects_unreviewed_bytes_before_evidence_or_receipt(self):
-        original_publisher, original_entry = self.publisher, self.entry
-        inputs = {Path(path).name: text for path, text in self.dependencies.items()}
-        inputs.update({'alignment.v1.json': '{}', 'hf-sync.yml': self.workflow,
-                  'hf-deploy.yml': self.caller, 'README.md': self.readme})
-        for changed in ('publisher', 'entrypoint', 'static-pin', 'line-endings'):
-            with self.subTest(changed=changed):
-                inputs['hf_publish_lyte_enterprise.py'] = original_publisher + (
-                    '\n# unreviewed publisher\n' if changed == 'publisher' else '')
-                inputs['hf_publish_vertical_flagships_v4.py'] = original_entry + (
-                    '\n# unreviewed entrypoint\n' if changed == 'entrypoint' else '')
-                if changed == 'static-pin':
-                    inputs['hf_publish_lyte_enterprise.py'] += '\nSOURCE_REVISION = "' + 'a' * 40 + '"\n'
-                if changed == 'line-endings':
-                    inputs['hf_publish_lyte_enterprise.py'] = original_publisher.replace('\n', '\r\n')
-                with patch.object(owner, 'DYNAMIC_PUBLISHER_BLOB', self.admitted_publisher), \
-                        patch.object(owner, 'DYNAMIC_ENTRYPOINT_BLOB', self.admitted_entrypoint), \
-                        patch.object(sys, 'argv', ['verify-hf-ownership.py', '--source', 'source',
-                            '--governance', 'governance', '--publisher', 'publisher',
-                            '--output', 'evidence/receipt.json']), \
-                        patch.object(Path, 'read_bytes', autospec=True,
-                            side_effect=lambda path: inputs[path.name].encode()), \
-                        patch.object(owner, 'read_source_evidence') as evidence, \
-                        patch.object(owner, 'revision') as checkout, \
-                        patch.object(Path, 'mkdir') as mkdir, \
-                        patch.object(Path, 'write_text') as receipt:
-                    with self.assertRaisesRegex(owner.ContractError, 'reviewed exact Git blobs'):
-                        owner.main()
-                    evidence.assert_not_called()
-                    checkout.assert_not_called()
-                    mkdir.assert_not_called()
-                    receipt.assert_not_called()
     def test_every_reviewed_dependency_and_workflow_is_bound(self):
         original = dict(self.dependencies)
-        for path in original:
-            for mutation in ('changed', 'missing', 'not-text'):
+        for path in EXPECTED_DEPENDENCIES:
+            for mutation in ('changed', 'missing', 'not-text', 'crlf'):
                 with self.subTest(path=path, mutation=mutation), self.assertRaises(owner.ContractError):
                     self.dependencies = dict(original)
                     if mutation == 'missing': self.dependencies.pop(path)
                     elif mutation == 'not-text': self.dependencies[path] = None
+                    elif mutation == 'crlf': self.dependencies[path] = original[path].replace('\n', '\r\n')
                     else: self.dependencies[path] += '# unreviewed change\n'
                     self.run_contract()
         self.dependencies = dict(original, unexpected='not admitted')
         with self.assertRaises(owner.ContractError): self.run_contract()
+    def test_crlf_and_lf_bytes_are_distinct_reviewed_identities(self):
+        text = 'line one\nline two\n'
+        self.assertNotEqual(owner.git_blob(text), owner.git_blob(text.replace('\n', '\r\n')))
     def test_supplied_workflow_must_match_the_admitted_workflow_bytes(self):
         self.workflow += '# unreviewed workflow\n'
         with self.assertRaises(owner.ContractError): self.run_contract()
-    def test_cli_rejects_changed_dependency_before_network_or_receipt(self):
-        inputs = {Path(path).name: text for path, text in self.dependencies.items()}
-        inputs.update({'alignment.v1.json': '{}', 'hf-deploy.yml': self.caller,
-                       'README.md': self.readme,
-                       'hf_publish_lyte_enterprise.py': self.publisher,
-                       'hf_publish_vertical_flagships_v4.py': self.entry})
-        for path in self.dependencies:
-            changed = dict(inputs)
-            changed[Path(path).name] += '# unreviewed dependency\n'
-            with self.subTest(path=path), \
-                    patch.object(owner, 'DYNAMIC_PUBLISHER_BLOB', self.admitted_publisher), \
-                    patch.object(owner, 'DYNAMIC_ENTRYPOINT_BLOB', self.admitted_entrypoint), \
-                    patch.object(owner, 'DYNAMIC_DEPENDENCY_BLOBS', self.admitted_dependencies), \
-                    patch.object(sys, 'argv', ['verify-hf-ownership.py', '--source', 'source',
-                        '--governance', 'governance', '--publisher', 'publisher',
-                        '--output', 'evidence/receipt.json']), \
-                    patch.object(Path, 'read_bytes', autospec=True,
-                        side_effect=lambda path: changed[path.name].encode()), \
-                    patch.object(owner, 'read_source_evidence') as evidence, \
-                    patch.object(owner, 'revision') as checkout, \
-                    patch.object(Path, 'write_text') as receipt:
-                with self.assertRaises(owner.ContractError): owner.main()
-                evidence.assert_not_called()
-                checkout.assert_not_called()
-                receipt.assert_not_called()
     def test_source_evidence_is_required_even_for_reviewed_dynamic_bytes(self):
-        with patch.object(owner, 'DYNAMIC_PUBLISHER_BLOB', self.admitted_publisher), \
-                patch.object(owner, 'DYNAMIC_ENTRYPOINT_BLOB', self.admitted_entrypoint), \
-                patch.object(owner, 'DYNAMIC_DEPENDENCY_BLOBS', self.admitted_dependencies), \
+        first, second, third = self.registry()
+        with first, second, third, \
                 self.assertRaisesRegex(owner.ContractError, 'actual immutable source evidence'):
             owner.validate(self.alignment, self.publisher, self.entry, self.workflow,
                 self.caller, self.readme, publisher_dependencies=self.dependencies)
@@ -285,6 +366,254 @@ class DynamicOwnershipContract(OwnershipContract):
             with self.subTest(bad=bad), patch.object(owner, 'github_json', side_effect=[self.head, first, bad]), \
                     self.assertRaises(owner.ContractError):
                 owner.read_source_evidence()
+
+    # --- Independent inventory and statically derived execution closure ---
+    def test_independent_inventory_equals_the_production_registry(self):
+        self.assertEqual(owner.PUBLISHER_PATH, EXPECTED_PUBLISHER)
+        self.assertEqual(owner.ENTRYPOINT_PATH, EXPECTED_ENTRYPOINT)
+        self.assertEqual(owner.WORKFLOW_PATH, EXPECTED_WORKFLOW)
+        self.assertEqual(len(EXPECTED_DEPENDENCIES), len(set(EXPECTED_DEPENDENCIES)))
+        self.assertEqual(set(owner.DYNAMIC_DEPENDENCY_BLOBS), set(EXPECTED_DEPENDENCIES))
+        self.assertNotIn(EXPECTED_PUBLISHER, owner.DYNAMIC_DEPENDENCY_BLOBS)
+        self.assertNotIn(EXPECTED_ENTRYPOINT, owner.DYNAMIC_DEPENDENCY_BLOBS)
+        for blob in (owner.DYNAMIC_PUBLISHER_BLOB, owner.DYNAMIC_ENTRYPOINT_BLOB,
+                     *owner.DYNAMIC_DEPENDENCY_BLOBS.values()):
+            self.assertRegex(blob, r'^[0-9a-f]{40}$')
+        self.assertEqual(owner.ADMITTED_DEFAULT_SCOPE, 'estate')
+        self.assertEqual(owner.ADMITTED_SCOPES, ('estate', 'lyte'))
+    def test_derived_closure_equals_the_independent_inventory(self):
+        self.assertEqual(owner.workflow_job_roots(self.workflow), list(EXPECTED_WORKFLOW_ROOTS))
+        sources = dict(synthetic_sources(), **{EXPECTED_PUBLISHER: self.publisher,
+                                               EXPECTED_ENTRYPOINT: self.entry})
+        closure, data = owner.derive_execution_closure(EXPECTED_WORKFLOW_ROOTS, sources)
+        self.assertEqual(closure, list(EXPECTED_CODE))
+        self.assertEqual(data, ['deployments/fixture/index.html'])
+    def test_receipt_records_the_admitted_estate_route_not_lyte_only(self):
+        closure = self.run_contract()['publisher_execution_closure']
+        self.assertEqual(closure['entrypoint_default_scope'], 'estate')
+        self.assertEqual(closure['workflow_scopes'], ['estate'])
+        self.assertEqual(closure['admitted_scopes'], ['estate', 'lyte'])
+        self.assertIs(closure['lyte_only'], False)
+        self.assertTrue(closure['route'].startswith('estate-default'))
+        self.assertEqual(closure['derivation'], 'STATIC_AST_NO_EXECUTION')
+        self.assertEqual(set(closure['admitted_blobs']),
+                         {EXPECTED_PUBLISHER, EXPECTED_ENTRYPOINT, *EXPECTED_DEPENDENCIES})
+        self.assertEqual(closure['workflow_roots'], list(EXPECTED_WORKFLOW_ROOTS))
+    def test_unregistered_neutral_helper_is_rejected_by_derivation(self):
+        forms = (
+            'HELPER = HERE / "neutral_fixture_helper.py"\n',
+            f'HELPER = {sibling("neutral_fixture_helper.py")}\n',
+            'import neutral_fixture_helper\n',
+            'from neutral_fixture_helper import inert\n',
+            'import importlib\nimportlib.import_module("neutral_fixture_helper")\n',
+            'import importlib.util\nimportlib.util.spec_from_file_location("n", "scripts/neutral_fixture_helper.py")\n',
+            'ARGV = ["python", "-m", "neutral_fixture_helper"]\n',
+            'HELPER = "scripts/neutral_fixture_helper.py"\n',
+            'HELPER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "neutral_fixture_helper.py")\n',
+            'HELPER = Path(HERE, "neutral_fixture_helper.py")\n',
+            'HELPER = HERE.joinpath("neutral_fixture_helper.py")\n',
+            'import importlib.util\nimportlib.util.spec_from_file_location("n", location=HERE / "neutral_fixture_helper.py")\n',
+        )
+        original_entry = self.entry
+        original_v3 = self.dependencies['scripts/hf_publish_vertical_services_frontier_v3.py']
+        for target in ('entrypoint', 'transitive-sibling'):
+            for form in forms:
+                with self.subTest(target=target, form=form), \
+                        self.assertRaisesRegex(owner.ContractError, 'unreviewed repository path'):
+                    self.entry = original_entry
+                    self.dependencies['scripts/hf_publish_vertical_services_frontier_v3.py'] = original_v3
+                    if target == 'entrypoint': self.entry = original_entry + form
+                    else: self.dependencies['scripts/hf_publish_vertical_services_frontier_v3.py'] = original_v3 + form
+                    self.admit()
+                    self.run_contract()
+    def test_registered_but_unreachable_file_is_rejected(self):
+        self.dependencies['scripts/orphan_fixture.py'] = '# inert orphan fixture\n'
+        self.admit()
+        with self.assertRaisesRegex(owner.ContractError, 'differs from the derived execution closure'):
+            self.run_contract()
+    def test_workflow_scope_must_agree_with_the_admitted_closure(self):
+        job = '  publish-vertical-flagships:\n    runs-on: ubuntu-latest\n'
+        accepted = {
+            'omitted': (SYNTHETIC_WORKFLOW, ['estate']),
+            'explicit-lyte': (SYNTHETIC_WORKFLOW.replace(job, job + '    env:\n      SZL_FLAGSHIP_SCOPE: lyte\n'),
+                              ['estate', 'lyte']),
+            'explicit-estate': (SYNTHETIC_WORKFLOW.replace(job, job + "    env:\n      SZL_FLAGSHIP_SCOPE: 'estate'\n"),
+                                ['estate']),
+            'unrelated-job': (SYNTHETIC_WORKFLOW.replace('  unrelated:\n    runs-on: ubuntu-latest\n',
+                '  unrelated:\n    runs-on: ubuntu-latest\n    env:\n      SZL_FLAGSHIP_SCOPE: finance\n'), ['estate']),
+        }
+        for name, (text, scopes) in accepted.items():
+            with self.subTest(name=name):
+                self.set_workflow(text)
+                self.assertEqual(self.run_contract()['publisher_execution_closure']['workflow_scopes'], scopes)
+        rejected = {scope: SYNTHETIC_WORKFLOW.replace(job, job + f'    env:\n      SZL_FLAGSHIP_SCOPE: {scope}\n')
+                    for scope in ('finance', 'sentra', 'terra', 'counsel', '${{ inputs.flagship_scope }}', '""')}
+        rejected['workflow-env'] = SYNTHETIC_WORKFLOW.replace('env:\n  CANONICAL_SPACE', 'env:\n  SZL_FLAGSHIP_SCOPE: finance\n  CANONICAL_SPACE')
+        rejected['github-env'] = SYNTHETIC_WORKFLOW.replace(
+            '      - run: python -I -B scripts/hf_publish_vertical_flagships_v4.py\n',
+            '      - run: echo "SZL_FLAGSHIP_SCOPE=sentra" >> "$GITHUB_ENV"\n'
+            '      - run: python -I -B scripts/hf_publish_vertical_flagships_v4.py\n')
+        rejected['mention-only'] = SYNTHETIC_WORKFLOW.replace(job, job + '    # SZL_FLAGSHIP_SCOPE stays unset here\n')
+        for name, text in rejected.items():
+            with self.subTest(name=name), self.assertRaises(owner.ContractError):
+                self.set_workflow(text)
+                self.run_contract()
+    def test_entrypoint_must_keep_the_reviewed_default_estate_selector(self):
+        selector = 'os.environ.get("SZL_FLAGSHIP_SCOPE", "estate")'
+        for variant in ('os.environ.get("SZL_FLAGSHIP_SCOPE", "finance")',
+                        'os.environ.get("SZL_FLAGSHIP_SCOPE", "lyte")',
+                        'os.environ.get("SZL_FLAGSHIP_SCOPE")',
+                        'os.environ.get("SZL_FLAGSHIP_SCOPE", DEFAULT)',
+                        'os.environ.get("SZL_FLAGSHIP_SCOPE", default="estate")',
+                        'os.environ.get("OTHER_SCOPE", "estate")',
+                        selector + ' or os.environ["SZL_FLAGSHIP_SCOPE"]'):
+            with self.subTest(variant=variant), self.assertRaisesRegex(owner.ContractError, 'default estate scope'):
+                self.entry = SYNTHETIC_ENTRYPOINT.replace(selector, variant)
+                self.admit()
+                self.run_contract()
+    def test_uncomputable_repository_references_fail_closed(self):
+        for addition in ('import importlib.util\nNAME = "x"\nimportlib.util.spec_from_file_location("x", HERE / f"{NAME}.py")\n',
+                         'NAME = "x.py"\nHELPER = HERE / NAME\n',
+                         'import importlib\nNAME = "x"\nimportlib.import_module(NAME)\n',
+                         'import importlib.util\nimportlib.util.spec_from_file_location("x", "scripts/" + "x.py")\n',
+                         'from . import sibling_fixture\n',
+                         'ESCAPE = Path(__file__).resolve().parents[9] / "x.py"\n',
+                         'FOUND = list(HERE.glob("*.py"))\n',
+                         'import sys\nNAME = "x"\nARGV = [sys.executable, "-m", NAME]\n',
+                         'HELPER = HERE.with_name(NAME_FROM_ELSEWHERE)\n',
+                         'ESCAPE = HERE / "/fixture/absolute.py"\n',
+                         'ESCAPE = HERE / "..\\\\fixture.py"\n',
+                         'N = 1\nUP = Path(__file__).parents[N]\n',
+                         'FOUND = os.listdir(HERE)\n',
+                         'import importlib\nimportlib.import_module(".neutral_fixture_helper")\n',
+                         'import importlib.util\nimportlib.util.spec_from_file_location("x", location="scripts/" + "x.py")\n',
+                         'import runpy\nrunpy.run_path("scripts/" + "x.py")\n',
+                         'from importlib.machinery import SourceFileLoader\nSourceFileLoader("x", "scripts/" + "x.py")\n'):
+            with self.subTest(addition=addition), self.assertRaises(owner.ContractError):
+                self.entry = SYNTHETIC_ENTRYPOINT + addition
+                self.admit()
+                self.run_contract()
+    def test_workflow_job_must_run_only_admitted_repository_programs(self):
+        step = '      - run: python -I -B scripts/estate_child_completion.py\n'
+        accepted = SYNTHETIC_WORKFLOW.replace('scripts/unrelated_fixture_tool.py', 'scripts/other_unrelated_tool.py')
+        self.set_workflow(accepted)
+        self.assertEqual(self.run_contract()['publisher_execution_closure']['workflow_roots'],
+                         list(EXPECTED_WORKFLOW_ROOTS))
+        for name, text in {
+                'unregistered-step': SYNTHETIC_WORKFLOW.replace(step, step + '      - run: bash scripts/new_fixture_step.sh\n'),
+                'local-action': SYNTHETIC_WORKFLOW.replace(step, step + '      - uses: ./.github/actions/fixture\n'),
+                'unreviewed-module': SYNTHETIC_WORKFLOW.replace(step, step + '      - run: python -m fixture_tool\n'),
+                'second-invoking-job': SYNTHETIC_WORKFLOW.replace('scripts/unrelated_fixture_tool.py', EXPECTED_ENTRYPOINT),
+                'no-invocation': SYNTHETIC_WORKFLOW.replace('scripts/hf_publish_vertical_flagships_v4.py', 'scripts/elsewhere.py'),
+                'no-jobs': 'name: fixture\non: workflow_dispatch\n'}.items():
+            with self.subTest(name=name), self.assertRaises(owner.ContractError):
+                self.set_workflow(text)
+                self.run_contract()
+    def test_malformed_admitted_closure_source_is_a_contract_error(self):
+        with self.assertRaisesRegex(owner.ContractError, 'not parseable'):
+            owner.entrypoint_default_scope('def broken(:\n')
+        for path in ('scripts/hf_finance_workspace.py', EXPECTED_ENTRYPOINT):
+            with self.subTest(path=path), self.assertRaisesRegex(owner.ContractError, 'not parseable'):
+                self.setUp()
+                if path == EXPECTED_ENTRYPOINT: self.entry = 'def broken(:\n'
+                else: self.dependencies[path] = 'def broken(:\n'
+                self.admit()
+                self.run_contract()
+
+    # --- Production CLI ordering: reject before evidence, checkout reads or receipt ---
+    def cli_inputs(self):
+        inputs = {f'publisher/{path}': text for path, text in self.dependencies.items()}
+        inputs.update({f'publisher/{EXPECTED_PUBLISHER}': self.publisher,
+                       f'publisher/{EXPECTED_ENTRYPOINT}': self.entry,
+                       'governance/estate/alignment.v1.json': json.dumps(self.alignment),
+                       'source/.github/workflows/hf-deploy.yml': self.caller,
+                       'source/README.md': self.readme})
+        return inputs
+    @contextlib.contextmanager
+    def cli(self, inputs, *, admitted=True):
+        reads = []
+        def read_bytes(path):
+            reads.append(path.as_posix())
+            return inputs[path.as_posix()].encode()
+        with contextlib.ExitStack() as stack:
+            if admitted:
+                for item in self.registry():
+                    stack.enter_context(item)
+            stack.enter_context(patch.object(sys, 'argv', ['verify-hf-ownership.py', '--source', 'source',
+                '--governance', 'governance', '--publisher', 'publisher', '--output', 'evidence/receipt.json']))
+            stack.enter_context(patch.object(Path, 'read_bytes', autospec=True, side_effect=read_bytes))
+            stack.enter_context(patch('builtins.print'))
+            mocks = {'evidence': stack.enter_context(patch.object(owner, 'read_source_evidence',
+                         return_value=(self.head, self.checks))),
+                     'checkout': stack.enter_context(patch.object(owner, 'revision', return_value='c' * 40)),
+                     'tip': stack.enter_context(patch.object(owner, 'github_json', return_value=self.head)),
+                     'mkdir': stack.enter_context(patch.object(Path, 'mkdir')),
+                     'receipt': stack.enter_context(patch.object(Path, 'write_text')),
+                     'reads': reads}
+            yield mocks
+    def assert_nothing_after_rejection(self, mocks):
+        for name in ('evidence', 'checkout', 'tip', 'mkdir', 'receipt'):
+            mocks[name].assert_not_called()
+    def test_cli_reaches_mocked_evidence_and_records_the_admitted_closure(self):
+        with self.cli(self.cli_inputs()) as mocks:
+            self.assertEqual(owner.main(), 0)
+        mocks['evidence'].assert_called_once_with()
+        self.assertEqual(mocks['checkout'].call_count, 3)
+        mocks['tip'].assert_called_once()
+        self.assertTrue({f'publisher/{path}' for path in (EXPECTED_PUBLISHER, EXPECTED_ENTRYPOINT,
+                         *EXPECTED_DEPENDENCIES)} <= set(mocks['reads']))
+        receipt = json.loads(mocks['receipt'].call_args.args[0])
+        self.assertIs(receipt['backend_tip_reverified'], True)
+        closure = receipt['publisher_execution_closure']
+        self.assertEqual(closure['workflow_scopes'], ['estate'])
+        self.assertIs(closure['lyte_only'], False)
+        self.assertEqual(set(closure['admitted_blobs']),
+                         {EXPECTED_PUBLISHER, EXPECTED_ENTRYPOINT, *EXPECTED_DEPENDENCIES})
+        self.assertEqual(closure['unbound_data_references'], ['deployments/fixture/index.html'])
+        self.assertEqual(set(receipt['publisher_dependency_blobs']), set(EXPECTED_DEPENDENCIES))
+    def test_cli_rejects_unreviewed_bytes_before_evidence_or_receipt(self):
+        original_publisher, original_entry = self.publisher, self.entry
+        for changed in ('publisher', 'entrypoint', 'static-pin', 'line-endings'):
+            with self.subTest(changed=changed):
+                self.publisher, self.entry = original_publisher, original_entry
+                if changed == 'publisher': self.publisher += '\n# unreviewed publisher\n'
+                if changed == 'entrypoint': self.entry += '\n# unreviewed entrypoint\n'
+                if changed == 'static-pin': self.publisher += '\nSOURCE_REVISION = "' + 'a' * 40 + '"\n'
+                if changed == 'line-endings': self.publisher = original_publisher.replace('\n', '\r\n')
+                inputs = self.cli_inputs()
+                self.publisher, self.entry = original_publisher, original_entry
+                with self.cli(inputs) as mocks, \
+                        self.assertRaisesRegex(owner.ContractError, 'reviewed exact Git blobs'):
+                    owner.main()
+                self.assert_nothing_after_rejection(mocks)
+    def test_cli_rejects_changed_dependency_before_network_or_receipt(self):
+        for path in EXPECTED_DEPENDENCIES:
+            for mutation in ('changed', 'crlf'):
+                inputs = self.cli_inputs()
+                key = f'publisher/{path}'
+                inputs[key] = inputs[key] + '# unreviewed dependency\n' if mutation == 'changed' \
+                    else inputs[key].replace('\n', '\r\n')
+                with self.subTest(path=path, mutation=mutation), self.cli(inputs) as mocks, \
+                        self.assertRaises(owner.ContractError):
+                    owner.main()
+                self.assert_nothing_after_rejection(mocks)
+    def test_cli_rejects_invalid_closure_before_evidence_or_receipt(self):
+        job = '  publish-vertical-flagships:\n    runs-on: ubuntu-latest\n'
+        original_entry, original_workflow = self.entry, self.workflow
+        for name in ('neutral-helper', 'finance-scope', 'orphan'):
+            with self.subTest(name=name):
+                self.setUp()
+                if name == 'neutral-helper':
+                    self.entry = original_entry + 'HELPER = HERE / "neutral_fixture_helper.py"\n'
+                elif name == 'finance-scope':
+                    self.set_workflow(original_workflow.replace(job, job + '    env:\n      SZL_FLAGSHIP_SCOPE: finance\n'))
+                else:
+                    self.dependencies['scripts/orphan_fixture.py'] = '# inert orphan fixture\n'
+                self.admit()
+                with self.cli(self.cli_inputs()) as mocks, self.assertRaises(owner.ContractError):
+                    owner.main()
+                self.assert_nothing_after_rejection(mocks)
+
 
 class PublisherIsolation(unittest.TestCase):
     def test_publisher_text_is_parsed_without_execution(self):
