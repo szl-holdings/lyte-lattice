@@ -1,0 +1,11 @@
+{
+  "contract_sha256": "87917173a49d7c52abfc92b7006517c5b92e5805d8e9b9601bc78e041e1dc83b",
+  "evidence_label": "REPORTED",
+  "kind": "repo",
+  "operational_state": "UNKNOWN",
+  "readme_block_sha256": "8747d8861caf5f0a442d773c020f16ec73f46f33531ac1aeeeffdcf3aba613b7",
+  "schema": "szl.surface-receipt/v1",
+  "surface": "lyte-lattice",
+  "svg_sha256": "414ed473dcc7c4d4a97239cd278bcb0d8263aa80c5206d41e2947de2a5439bdc",
+  "visual_variant": 4
+}

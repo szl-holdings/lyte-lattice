@@ -1,0 +1,20 @@
+{
+  "schema": "szl.surface-foundry/v3",
+  "surfaces": [
+    {
+      "slug": "lyte-lattice",
+      "display_name": "LYTE Lattice",
+      "kind": "repo",
+      "one_liner": "Explore the Lyte presentation package and its connection to one canonical source-owned runtime.",
+      "decision_path": "Follow the product window, presentation source and runtime ownership.",
+      "builder_path": "Read the package and its delegated lyte-services backend contract.",
+      "primary_url": "https://a-11-oy.com/lyte",
+      "source_url": "https://github.com/szl-holdings/lyte-lattice",
+      "evidence_url": "https://github.com/szl-holdings/lyte-lattice/blob/0d66f873cd1be784c405842f898684334de8c713/README.md",
+      "evidence_label": "REPORTED",
+      "operational_state": "UNKNOWN",
+      "limitations": "BIND_AS_A11OY_PACKAGE. Runtime readback is separate; the retired standalone target stays retired. No GPU dispatch or invented energy. Λ remains Conjecture 1.",
+      "image_url": "./readme-surface-card.svg"
+    }
+  ]
+}
