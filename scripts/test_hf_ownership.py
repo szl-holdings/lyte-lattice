@@ -103,6 +103,11 @@ class DynamicOwnershipContract(OwnershipContract):
         self.entry = self.entry.replace('LYTE_SOURCE_REVISION = "' + 'a' * 40 + '"\n', '')
         self.admitted_publisher = owner.git_blob(self.publisher)
         self.admitted_entrypoint = owner.git_blob(self.entry)
+        self.dependencies = {path: '# reviewed fixture: ' + path + '\n'
+                             for path in owner.DYNAMIC_DEPENDENCY_BLOBS}
+        self.dependencies['.github/workflows/hf-sync.yml'] = self.workflow
+        self.admitted_dependencies = {path: owner.git_blob(text)
+                                      for path, text in self.dependencies.items()}
         self.head = {'sha': 'a' * 40, 'commit': {'verification': {'verified': True}}}
         self.checks = {'total_count': len(REQUIRED_CHECKS), 'check_runs': [
             {'name': name, 'head_sha': 'a' * 40, 'status': 'completed',
@@ -110,9 +115,11 @@ class DynamicOwnershipContract(OwnershipContract):
             for name in REQUIRED_CHECKS]}
     def run_contract(self):
         with patch.object(owner, 'DYNAMIC_PUBLISHER_BLOB', self.admitted_publisher), \
-                patch.object(owner, 'DYNAMIC_ENTRYPOINT_BLOB', self.admitted_entrypoint):
+                patch.object(owner, 'DYNAMIC_ENTRYPOINT_BLOB', self.admitted_entrypoint), \
+                patch.object(owner, 'DYNAMIC_DEPENDENCY_BLOBS', self.admitted_dependencies):
             return owner.validate(self.alignment, self.publisher, self.entry, self.workflow,
-                self.caller, self.readme, source_head=self.head, source_checks=self.checks)
+                self.caller, self.readme, source_head=self.head, source_checks=self.checks,
+                publisher_dependencies=self.dependencies)
     def test_signed_checked_tip_is_still_an_immutable_source_authority_receipt(self):
         result = self.run_contract()
         self.assertEqual(result['backend_source_revision'], 'a' * 40)
@@ -171,24 +178,30 @@ class DynamicOwnershipContract(OwnershipContract):
     def test_declaring_a_resolver_without_reviewed_bytes_is_rejected(self):
         with self.assertRaises(owner.ContractError):
             owner.validate(self.alignment, self.publisher, self.entry, self.workflow,
-                self.caller, self.readme, source_head=self.head, source_checks=self.checks)
+                self.caller, self.readme, source_head=self.head, source_checks=self.checks,
+                publisher_dependencies=self.dependencies)
     def test_cli_rejects_unreviewed_bytes_before_evidence_or_receipt(self):
         original_publisher, original_entry = self.publisher, self.entry
-        inputs = {'alignment.v1.json': '{}', 'hf-sync.yml': self.workflow,
-                  'hf-deploy.yml': self.caller, 'README.md': self.readme}
-        for changed in ('publisher', 'entrypoint'):
+        inputs = {Path(path).name: text for path, text in self.dependencies.items()}
+        inputs.update({'alignment.v1.json': '{}', 'hf-sync.yml': self.workflow,
+                  'hf-deploy.yml': self.caller, 'README.md': self.readme})
+        for changed in ('publisher', 'entrypoint', 'static-pin', 'line-endings'):
             with self.subTest(changed=changed):
                 inputs['hf_publish_lyte_enterprise.py'] = original_publisher + (
                     '\n# unreviewed publisher\n' if changed == 'publisher' else '')
                 inputs['hf_publish_vertical_flagships_v4.py'] = original_entry + (
                     '\n# unreviewed entrypoint\n' if changed == 'entrypoint' else '')
+                if changed == 'static-pin':
+                    inputs['hf_publish_lyte_enterprise.py'] += '\nSOURCE_REVISION = "' + 'a' * 40 + '"\n'
+                if changed == 'line-endings':
+                    inputs['hf_publish_lyte_enterprise.py'] = original_publisher.replace('\n', '\r\n')
                 with patch.object(owner, 'DYNAMIC_PUBLISHER_BLOB', self.admitted_publisher), \
                         patch.object(owner, 'DYNAMIC_ENTRYPOINT_BLOB', self.admitted_entrypoint), \
                         patch.object(sys, 'argv', ['verify-hf-ownership.py', '--source', 'source',
                             '--governance', 'governance', '--publisher', 'publisher',
                             '--output', 'evidence/receipt.json']), \
-                        patch.object(Path, 'read_text', autospec=True,
-                            side_effect=lambda path, **kwargs: inputs[path.name]), \
+                        patch.object(Path, 'read_bytes', autospec=True,
+                            side_effect=lambda path: inputs[path.name].encode()), \
                         patch.object(owner, 'read_source_evidence') as evidence, \
                         patch.object(owner, 'revision') as checkout, \
                         patch.object(Path, 'mkdir') as mkdir, \
@@ -199,12 +212,53 @@ class DynamicOwnershipContract(OwnershipContract):
                     checkout.assert_not_called()
                     mkdir.assert_not_called()
                     receipt.assert_not_called()
+    def test_every_reviewed_dependency_and_workflow_is_bound(self):
+        original = dict(self.dependencies)
+        for path in original:
+            for mutation in ('changed', 'missing', 'not-text'):
+                with self.subTest(path=path, mutation=mutation), self.assertRaises(owner.ContractError):
+                    self.dependencies = dict(original)
+                    if mutation == 'missing': self.dependencies.pop(path)
+                    elif mutation == 'not-text': self.dependencies[path] = None
+                    else: self.dependencies[path] += '# unreviewed change\n'
+                    self.run_contract()
+        self.dependencies = dict(original, unexpected='not admitted')
+        with self.assertRaises(owner.ContractError): self.run_contract()
+    def test_supplied_workflow_must_match_the_admitted_workflow_bytes(self):
+        self.workflow += '# unreviewed workflow\n'
+        with self.assertRaises(owner.ContractError): self.run_contract()
+    def test_cli_rejects_changed_dependency_before_network_or_receipt(self):
+        inputs = {Path(path).name: text for path, text in self.dependencies.items()}
+        inputs.update({'alignment.v1.json': '{}', 'hf-deploy.yml': self.caller,
+                       'README.md': self.readme,
+                       'hf_publish_lyte_enterprise.py': self.publisher,
+                       'hf_publish_vertical_flagships_v4.py': self.entry})
+        for path in self.dependencies:
+            changed = dict(inputs)
+            changed[Path(path).name] += '# unreviewed dependency\n'
+            with self.subTest(path=path), \
+                    patch.object(owner, 'DYNAMIC_PUBLISHER_BLOB', self.admitted_publisher), \
+                    patch.object(owner, 'DYNAMIC_ENTRYPOINT_BLOB', self.admitted_entrypoint), \
+                    patch.object(owner, 'DYNAMIC_DEPENDENCY_BLOBS', self.admitted_dependencies), \
+                    patch.object(sys, 'argv', ['verify-hf-ownership.py', '--source', 'source',
+                        '--governance', 'governance', '--publisher', 'publisher',
+                        '--output', 'evidence/receipt.json']), \
+                    patch.object(Path, 'read_bytes', autospec=True,
+                        side_effect=lambda path: changed[path.name].encode()), \
+                    patch.object(owner, 'read_source_evidence') as evidence, \
+                    patch.object(owner, 'revision') as checkout, \
+                    patch.object(Path, 'write_text') as receipt:
+                with self.assertRaises(owner.ContractError): owner.main()
+                evidence.assert_not_called()
+                checkout.assert_not_called()
+                receipt.assert_not_called()
     def test_source_evidence_is_required_even_for_reviewed_dynamic_bytes(self):
         with patch.object(owner, 'DYNAMIC_PUBLISHER_BLOB', self.admitted_publisher), \
                 patch.object(owner, 'DYNAMIC_ENTRYPOINT_BLOB', self.admitted_entrypoint), \
-                self.assertRaises(owner.ContractError):
+                patch.object(owner, 'DYNAMIC_DEPENDENCY_BLOBS', self.admitted_dependencies), \
+                self.assertRaisesRegex(owner.ContractError, 'actual immutable source evidence'):
             owner.validate(self.alignment, self.publisher, self.entry, self.workflow,
-                self.caller, self.readme)
+                self.caller, self.readme, publisher_dependencies=self.dependencies)
     def test_unsigned_or_moved_tip_is_rejected_by_final_recheck(self):
         with patch.object(owner, 'github_json', return_value=self.head):
             owner.require_current_source('a' * 40)
