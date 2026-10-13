@@ -71,7 +71,9 @@ ADMITTED_SCOPES = ('estate', 'lyte')
 # Non-standard-library imports reviewed in the closure. Any other import name
 # is treated as a repository sibling module and must itself be admitted.
 ADMITTED_EXTERNAL_IMPORTS = ('huggingface_hub',)
-CODE_SUFFIXES = ('.py', '.pyw', '.pyc', '.pyz', '.pyd', '.pth', '.so', '.sh', '.bash')
+# One executable-suffix set for closure references and workflow job programs.
+CODE_SUFFIXES = ('.py', '.pyw', '.pyc', '.pyz', '.pyd', '.pth', '.so', '.sh', '.bash',
+                 '.mjs', '.cjs', '.js', '.ts')
 WORKFLOW_MODULES = ('pip',)
 
 class ContractError(ValueError):
@@ -143,9 +145,6 @@ def _anchored(node: ast.AST, origin: str, names: dict[str, frozenset[str]]) -> f
     if not isinstance(node, ast.Call):
         return None
     func, name = node.func, _call_name(node)
-    if (name in ('listdir', 'scandir', 'walk', 'glob', 'iglob') and node.args
-            and _anchored(node.args[0], origin, names) is not None):
-        raise ContractError('Publisher closure enumerates a repository directory')
     if isinstance(func, ast.Attribute) and _is_os_path(func.value) and node.args:
         base = _anchored(node.args[0], origin, names)
         if base is None:
@@ -178,9 +177,41 @@ def _anchored(node: ast.AST, origin: str, names: dict[str, frozenset[str]]) -> f
         if func.attr == 'joinpath':
             parts = [_literal_part(arg) for arg in node.args]
             return frozenset(_join(path, '/'.join(parts)) for path in base)
-        if func.attr in ('glob', 'rglob', 'iterdir', 'walk'):
-            raise ContractError('Publisher closure enumerates a repository directory')
     return None
+
+_MODULE_ENUMERATORS = {'os': ('listdir', 'scandir', 'walk', 'fwalk'), 'glob': ('glob', 'iglob')}
+_PATH_ENUMERATORS = ('glob', 'rglob', 'iterdir', 'walk')
+_BARE_ENUMERATORS = ('listdir', 'scandir', 'walk', 'fwalk', 'glob', 'iglob')
+
+def _check_enumeration(node: ast.Call, origin: str, names: dict[str, frozenset[str]]) -> None:
+    """Directory listing can select unreviewed code; the job CWD is the repository root.
+
+    The one admitted shape is a glob, on a receiver not anchored at this file,
+    whose literal pattern ends in a concrete, wildcard-free, non-code suffix.
+    That shape cannot select code. Anchored enumeration stays rejected.
+    """
+    func = node.func
+    if isinstance(func, ast.Name):
+        if func.id in _BARE_ENUMERATORS:
+            raise ContractError('Publisher closure enumerates a repository directory')
+        return
+    if not isinstance(func, ast.Attribute):
+        return
+    receiver = func.value
+    if isinstance(receiver, ast.Name) and receiver.id in _MODULE_ENUMERATORS:
+        if func.attr not in _MODULE_ENUMERATORS[receiver.id]:
+            return
+        anchored = False
+    elif func.attr in _PATH_ENUMERATORS and not (isinstance(receiver, ast.Name) and receiver.id == 'ast'):
+        anchored = _anchored(receiver, origin, names) is not None
+    else:
+        return
+    pattern = node.args[0] if len(node.args) == 1 and not node.keywords else None
+    suffix = (posixpath.splitext(pattern.value)[1]
+              if isinstance(pattern, ast.Constant) and isinstance(pattern.value, str) else '')
+    if (anchored or func.attr not in ('glob', 'rglob', 'iglob')
+            or re.fullmatch(r'\.[A-Za-z0-9]+', suffix) is None or suffix in CODE_SUFFIXES):
+        raise ContractError('Publisher closure enumerates a repository directory')
 
 def _module_reference(module: str, origin: str) -> str | None:
     top = module.split('.', 1)[0]
@@ -219,6 +250,51 @@ def file_references(path: str, source: str) -> tuple[set[str], set[str]]:
     while cursor:
         cursor = posixpath.dirname(cursor)
         anchors.add(cursor)
+    enclosing: dict[ast.AST, ast.FunctionDef] = {}
+    def scope(node: ast.AST, function: ast.FunctionDef | None) -> None:
+        for child in ast.iter_child_nodes(node):
+            if function is not None:
+                enclosing[child] = function
+            scope(child, child if isinstance(child, ast.FunctionDef) else function)
+    scope(tree, None)
+    definitions: dict[str, list[ast.FunctionDef]] = {}
+    calls: dict[str, list[ast.Call]] = {}
+    callee_ids = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef):
+            definitions.setdefault(node.name, []).append(node)
+        elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+            calls.setdefault(node.func.id, []).append(node)
+            callee_ids.add(id(node.func))
+    value_uses = {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)
+                  and isinstance(node.ctx, ast.Load) and id(node) not in callee_ids}
+
+    def resolved(target: ast.AST, seen: frozenset[tuple[str, str]]) -> bool:
+        """Anchored, or a parameter whose every same-module call site resolves."""
+        function = enclosing.get(target)
+        positional = [arg.arg for arg in (function.args.posonlyargs + function.args.args)] if function else []
+        keyword = [arg.arg for arg in function.args.kwonlyargs] if function else []
+        if not (isinstance(target, ast.Name) and target.id in positional + keyword):
+            return _anchored(target, path, names) is not None
+        if (function.name, target.id) in seen:
+            return True
+        stores = [node for node in ast.walk(function) if isinstance(node, ast.Name)
+                  and node.id == target.id and not isinstance(node.ctx, ast.Load)]
+        sites = calls.get(function.name, [])
+        if (stores or len(definitions[function.name]) != 1 or function.name in value_uses
+                or not sites):
+            return False
+        for call in sites:
+            if (any(isinstance(arg, ast.Starred) for arg in call.args)
+                    or any(kw.arg is None for kw in call.keywords)):
+                return False
+            argument = next((kw.value for kw in call.keywords if kw.arg == target.id), None)
+            if argument is None and target.id in positional and positional.index(target.id) < len(call.args):
+                argument = call.args[positional.index(target.id)]
+            if argument is None or not resolved(argument, seen | {(function.name, target.id)}):
+                return False
+        return True
+
     found: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
@@ -243,6 +319,7 @@ def file_references(path: str, source: str) -> tuple[set[str], set[str]]:
                     if (ref := _module_reference(module, path)) is not None:
                         found.add(ref)
         if isinstance(node, ast.Call):
+            _check_enumeration(node, path, names)
             name = _call_name(node)
             if name in _MODULE_LOADERS:
                 target = node.args[0] if node.args else None
@@ -252,10 +329,8 @@ def file_references(path: str, source: str) -> tuple[set[str], set[str]]:
                 index = _FILE_LOADERS[name]
                 target = node.args[index] if len(node.args) > index else next(
                     (kw.value for kw in node.keywords if kw.arg == 'location'), None)
-                if target is None or not (
-                        isinstance(target, (ast.Name, ast.Attribute))
-                        or (isinstance(target, ast.Constant) and isinstance(target.value, str))
-                        or _anchored(target, path, names) is not None):
+                literal = isinstance(target, ast.Constant) and isinstance(target.value, str)
+                if target is None or not (literal or resolved(target, frozenset())):
                     raise ContractError(f'Publisher closure loads a computed module path: {path}')
                 if isinstance(target, ast.Constant):
                     found.add(_repo_path(target.value))
@@ -295,24 +370,53 @@ def _workflow_entry_job(workflow: str) -> tuple[str, str]:
         raise ContractError('Publisher workflow must invoke the entrypoint from exactly one job')
     return workflow[:marker.start()], invoking[0]
 
+def _is_scope_read(node: ast.AST) -> bool:
+    """`os.environ.get(VAR, default)` or `os.getenv(VAR, default)`, receiver verified."""
+    if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+            and len(node.args) == 2 and not node.keywords
+            and isinstance(node.args[0], ast.Constant)
+            and node.args[0].value == ENTRYPOINT_SCOPE_VARIABLE):
+        return False
+    func = node.func
+    os_name = lambda value: isinstance(value, ast.Name) and value.id == 'os'
+    return ((func.attr == 'getenv' and os_name(func.value))
+            or (func.attr == 'get' and isinstance(func.value, ast.Attribute)
+                and func.value.attr == 'environ' and os_name(func.value.value)))
+
 def entrypoint_default_scope(entrypoint: str) -> str:
-    """The literal default of the entrypoint's single scope selector."""
+    """The literal default of the entrypoint's one scope selector that drives dispatch.
+
+    Reviewed shape: inside one function, `scope = os.environ.get(VAR, "estate")`
+    is the only assignment to that name, and `if scope == "lyte": return ...`
+    selects the Lyte-only route; every other path falls through to estate.
+    """
     try:
         tree = ast.parse(entrypoint)
     except (SyntaxError, ValueError):
         raise ContractError('Publisher entrypoint is not parseable Python') from None
     mentions = [node for node in ast.walk(tree)
                 if isinstance(node, ast.Constant) and node.value == ENTRYPOINT_SCOPE_VARIABLE]
-    defaults = []
-    for node in ast.walk(tree):
-        if (isinstance(node, ast.Call) and _call_name(node) in ('get', 'getenv') and node.args
-                and isinstance(node.args[0], ast.Constant)
-                and node.args[0].value == ENTRYPOINT_SCOPE_VARIABLE):
-            value = node.args[1] if len(node.args) == 2 and not node.keywords else None
-            defaults.append(value.value if isinstance(value, ast.Constant) else None)
-    if len(mentions) != 1 or len(defaults) != 1 or defaults[0] != ADMITTED_DEFAULT_SCOPE:
+    selectors = [(function, node) for function in ast.walk(tree) if isinstance(function, ast.FunctionDef)
+                 for node in function.body if isinstance(node, ast.Assign)
+                 and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name)
+                 and _is_scope_read(node.value)]
+    if len(mentions) != 1 or len(selectors) != 1:
         raise ContractError('Publisher entrypoint must keep the reviewed default estate scope selector')
-    return defaults[0]
+    function, assignment = selectors[0]
+    name, default = assignment.targets[0].id, assignment.value.args[1]
+    stores = [node for node in ast.walk(function) if isinstance(node, ast.Name)
+              and node.id == name and not isinstance(node.ctx, ast.Load)]
+    dispatch = [node for node in ast.walk(function) if isinstance(node, ast.If)
+                and isinstance(node.test, ast.Compare) and isinstance(node.test.left, ast.Name)
+                and node.test.left.id == name and len(node.test.ops) == 1
+                and isinstance(node.test.ops[0], ast.Eq)
+                and isinstance(node.test.comparators[0], ast.Constant)
+                and node.test.comparators[0].value == 'lyte'
+                and node.body and isinstance(node.body[0], ast.Return)]
+    if (len(stores) != 1 or len(dispatch) != 1 or not isinstance(default, ast.Constant)
+            or default.value != ADMITTED_DEFAULT_SCOPE):
+        raise ContractError('Publisher entrypoint must keep the reviewed default estate scope selector')
+    return default.value
 
 def workflow_entrypoint_scopes(workflow: str, default: str) -> list[str]:
     """Every scope the invoking job can select; unresolved values fail closed."""
@@ -333,8 +437,9 @@ def workflow_job_roots(workflow: str) -> list[str]:
     _, job = _workflow_entry_job(workflow)
     if re.search(r'(?m)^\s*(?:-\s*)?uses:\s*["\']?\./', job):
         raise ContractError('Publisher workflow job uses an unreviewed local action')
+    suffixes = '|'.join(re.escape(suffix[1:]) for suffix in CODE_SUFFIXES)
     roots = {_repo_path(match) for match in re.findall(
-        r'(?<![\w./:@$-])(?:\./)?((?:[\w-][\w.-]*/)*[\w-][\w.-]*\.(?:py|pyw|sh|bash|mjs|cjs|js|ts))(?![\w.-])', job)}
+        r'(?<![\w./:@$-])(?:\./)?((?:[\w-][\w.-]*/)*[\w-][\w.-]*\.(?:' + suffixes + r'))(?![\w.-])', job)}
     for module in re.findall(r'(?:^|\s)-m\s+([\w.]+)', job):
         top = module.split('.', 1)[0]
         if top not in WORKFLOW_MODULES and top not in sys.stdlib_module_names:

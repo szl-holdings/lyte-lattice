@@ -93,17 +93,29 @@ verifier makes four checks:
 
 1. Every admitted path must have its exact reviewed blob; CRLF and LF bytes are
    distinct identities. The supplied workflow must equal the admitted copy.
-2. The entrypoint must read `SZL_FLAGSHIP_SCOPE` exactly once, with the literal
-   default `estate`. The invoking job and the workflow-level env may select
-   only `estate` or `lyte`.
+2. The entrypoint must read `SZL_FLAGSHIP_SCOPE` exactly once, through
+   `os.environ.get` or `os.getenv` with the literal default `estate`. That read
+   must be the only assignment to its name inside one function, and that name
+   must drive the `if scope == "lyte": return ...` dispatch branch. The invoking
+   job and the workflow-level env may select only `estate` or `lyte`.
 3. The workflow roots are every repository program the invoking job runs, and
    the closure is derived from them statically, with AST only and no
    execution. The derivation follows `__file__`-anchored paths (`HERE / "x.py"`,
    `with_name`, `parents[n]`), `scripts/...` literals, sibling imports,
-   `importlib`/`runpy` targets and `-m` module arguments, transitively. A
-   computed loader target, relative import, directory enumeration or path
-   escaping the repository fails closed. So does any import outside the
-   standard library and `huggingface_hub`.
+   `importlib`/`runpy` targets and `-m` module arguments, transitively.
+   Python, shell and JavaScript/TypeScript suffixes are all code. The following
+   fail closed:
+   - a relative import, or a path escaping the repository;
+   - any import outside the standard library and `huggingface_hub`;
+   - a loader target unless it is a literal, a `__file__`-anchored path, or a
+     parameter whose every same-module call site resolves the same way (the
+     entrypoint's `load_module` chain);
+   - any directory enumeration (`os.listdir`, `os.scandir`, `os.walk`,
+     `glob.glob`/`iglob`, `Path.glob`/`rglob`/`iterdir`/`walk`), anchored or
+     not, because the job runs at the repository root. The one exception is a
+     glob on an unanchored path whose literal pattern ends in a concrete,
+     wildcard-free, non-code suffix. That covers the Lyte publisher's
+     run-local `*.json` replay-journal check, which cannot select code.
 4. The derived closure must equal the admitted registry exactly. An
    unreferenced registered file is rejected, and so is an unregistered helper.
 
