@@ -20,11 +20,12 @@ SOURCE_REQUIRED_CHECKS = (
     'responsive-overflow', 'bundle-budget', 'container-build', 'container-smoke',
     'source-binding',
 )
-# Reviewed immutable a11oy@88ab7ab539c779f2a026bdd6cff5193a950289c6 blobs.
-# Publisher pins the reviewed controller 10cb5f7665ab5469c876c3418888a71f521fd76b.
+# Reviewed immutable a11oy@a2a9292346fa02d4c239564b6773f704204ea541 blobs.
+# Publisher pins controller 163a61fd9759e5ecc3c2daf13e528f7b281ff81d.
+# Admission scope and dependent source identities: docs/lyte-publisher-admission.md.
 # A new publisher/resolver or entrypoint requires a separate authority review.
-DYNAMIC_PUBLISHER_BLOB = '0dfd432f5311cd6c5ed3999b7ee5dab98bbffd48'
-DYNAMIC_ENTRYPOINT_BLOB = 'cdbe1577313c138d9cf8af294509e6c502d67a5b'
+DYNAMIC_PUBLISHER_BLOB = '7c533d753a2b913a77bb71074f04aa5b753b0392'
+DYNAMIC_ENTRYPOINT_BLOB = '508293e2631f0f7b952cfe06eb4836fdd81cffa4'
 
 class ContractError(ValueError):
     """A publication authority or exact-source invariant is missing."""
