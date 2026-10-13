@@ -34,7 +34,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Harden runner
-        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25
         with:
           egress-policy: audit
       - name: Checkout exact presentation source
@@ -72,7 +72,7 @@ jobs:
           --source source --governance governance --publisher publisher
           --output evidence/hf-canonical-delegation.json
       - name: Preserve the source-authority receipt
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: lyte-canonical-delegation-${{ github.run_id }}-${{ github.run_attempt }}
           path: evidence/hf-canonical-delegation.json
