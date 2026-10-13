@@ -38,6 +38,7 @@ Dependent source identities admitted at the same publisher commit:
 | `.github/workflows/hf-sync.yml` | `6facc0d1eb48db3033600a101729b971e256aa48` |
 | `scripts/hf_exact_main_ownership.py` | `6e95133ac74f0d05d5372ed68022a691ceaa15c2` |
 | `scripts/estate_repair_dispatch.py` | `81f0e83729390ee66b633a8d45e5f1139374ba41` |
+| `scripts/estate_child_completion.py` | `5e59e91824d58da9bcc650c623c3bdfaf6f0040b` |
 
 The publisher's separately pinned controller is
 `szl-holdings/.github@163a61fd9759e5ecc3c2daf13e528f7b281ff81d`, path
@@ -45,7 +46,10 @@ The publisher's separately pinned controller is
 `3fa968416a3623d66b5b5b64abf8b830cc854e1c`. Its fetched bytes are checked against
 that blob before execution. The verifier checks every local dependency blob above before fetching source
 evidence or emitting a delegation receipt. Missing or modified workflow, source
-and plan gates, release guard, live contract or existing-Space guard fail closed.
+and plan gates, completion helper, release guard, live contract or existing-Space
+guard fail closed. The completion helper's workflow entrypoint only validates
+the bounded local receipt and job outcome; its other dispatch helpers are outside
+this Lyte invocation.
 Unrelated publisher-repository commits remain admissible only when this entire
 reviewed Lyte closure is byte-identical; the exact checkout revision is recorded.
 
