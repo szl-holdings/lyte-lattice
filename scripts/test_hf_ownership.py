@@ -198,7 +198,8 @@ jobs:
       - run: python -I -B scripts/estate_child_completion.py
 '''
 
-SYNTHETIC_ENTRYPOINT = '''import os
+SYNTHETIC_ENTRYPOINT = '''import importlib.util
+import os
 from pathlib import Path
 HERE = Path(__file__).resolve().parent
 SOURCE_OWNED_FLAGSHIP_SLUGS = ("lyte",)
@@ -207,8 +208,25 @@ LYTE_IMPL = HERE / "hf_publish_lyte_enterprise.py"
 COMBINED_IMPL = HERE / "hf_publish_vertical_services_intelligence_v4.py"
 SPACE_GUARD_IMPL = HERE / "hf_existing_space_guard.py"
 RELEASE_GUARD_IMPL = HERE / "szl_release_guard.py"
+def _load_from_path(name, path):
+    return importlib.util.spec_from_file_location(name, path)
+def load_module(name, path):
+    if path != LYTE_IMPL:
+        return _load_from_path(name, path)
+    _load_from_path("release_guard", RELEASE_GUARD_IMPL)
+    return _load_from_path(name, path)
+def run_publisher(name, path, *, finance_only=False):
+    return load_module(name, path)
+def publish_lyte_only():
+    return run_publisher("lyte", LYTE_IMPL)
 def main():
-    return os.environ.get("SZL_FLAGSHIP_SCOPE", "estate")
+    load_module("guard", SPACE_GUARD_IMPL)
+    scope = os.environ.get("SZL_FLAGSHIP_SCOPE", "estate")
+    if scope == "lyte":
+        return publish_lyte_only()
+    run_publisher("flagships", FLAGSHIP_IMPL, finance_only=False)
+    run_publisher("lyte", LYTE_IMPL)
+    return run_publisher("combined", COMBINED_IMPL)
 '''
 
 
@@ -221,7 +239,9 @@ class DynamicOwnershipContract(OwnershipContract):
         self.publisher = ('from pathlib import Path\nfrom szl_release_guard import run_bounded\n'
             + self.publisher + '\nCONTRACT_PATH = Path(__file__).resolve().with_name('
             '"lyte_enterprise_live_contract.py")\ndef controller(td):\n'
-            '    return Path(td) / "controller.py"\n')
+            '    return Path(td) / "controller.py"\n'
+            'EVIDENCE_DIRECTORY = Path("hf-lyte-release-evidence")\n'
+            'def retained(intent):\n    return list(intent.parent.glob("*.json"))\n')
         self.entry = SYNTHETIC_ENTRYPOINT
         self.workflow = SYNTHETIC_WORKFLOW
         self.dependencies = {path: text for path, text in synthetic_sources().items()}
@@ -520,6 +540,82 @@ class DynamicOwnershipContract(OwnershipContract):
                 self.admit()
                 self.run_contract()
 
+    def assert_entry_rejected(self, entry, message=None):
+        self.entry = entry
+        self.admit()
+        if message is None:
+            with self.assertRaises(owner.ContractError): self.run_contract()
+        else:
+            with self.assertRaisesRegex(owner.ContractError, message): self.run_contract()
+    def test_loader_targets_must_resolve_to_anchored_paths(self):
+        """Thread 1: a Name/Attribute loader target is admitted only when resolved."""
+        loader = 'importlib.util.spec_from_file_location'
+        for addition in (f'{loader}("x", UNRESOLVED_TARGET)\n',
+                         f'{loader}("x", settings.target)\n',
+                         f'def fixture_load(target):\n    return {loader}("x", target)\nfixture_load(UNRESOLVED_TARGET)\n',
+                         f'def fixture_load(target):\n    return {loader}("x", target)\n',
+                         f'def fixture_load(target):\n    return {loader}("x", target)\nfixture_load(LYTE_IMPL)\nCALLBACK = fixture_load\n',
+                         f'def fixture_load(target):\n    return {loader}("x", target)\nfixture_load(*[LYTE_IMPL])\n',
+                         f'def fixture_load(target):\n    target = UNRESOLVED_TARGET\n    return {loader}("x", target)\nfixture_load(LYTE_IMPL)\n',
+                         f'def fixture_load(target=LYTE_IMPL):\n    return {loader}("x", target)\nfixture_load()\n',
+                         f'def fixture_load(target):\n    return {loader}("x", target)\n'
+                         f'def fixture_load(target):\n    return {loader}("x", target)\nfixture_load(LYTE_IMPL)\n',
+                         'import runpy\nrunpy.run_path(UNRESOLVED_TARGET)\n'):
+            with self.subTest(addition=addition):
+                self.assert_entry_rejected(SYNTHETIC_ENTRYPOINT + addition, 'computed module path')
+        for resolved in (f'def fixture_load(target):\n    return {loader}("x", target)\nfixture_load(target=LYTE_IMPL)\n',
+                         f'def fixture_load(*, target):\n    return {loader}("x", target)\nfixture_load(target=LYTE_IMPL)\n',
+                         f'def fixture_load(target, depth):\n    if depth:\n        return fixture_load(target, depth - 1)\n'
+                         f'    return {loader}("x", target)\nfixture_load(LYTE_IMPL, 1)\n'):
+            with self.subTest(resolved=resolved):
+                self.entry = SYNTHETIC_ENTRYPOINT + resolved
+                self.admit()
+                self.assertEqual(self.run_contract()['state'], 'DELEGATED')
+    def test_directory_enumeration_fails_closed_without_an_anchor(self):
+        """Thread 2: the workflow CWD is the repository root."""
+        for addition in ('FOUND = os.listdir("scripts")\n', 'FOUND = os.walk("scripts")\n',
+                         'FOUND = os.scandir(".")\n', 'import glob\nFOUND = glob.glob("scripts/*.py")\n',
+                         'import glob\nFOUND = glob.iglob("*")\n', 'FOUND = Path("scripts").glob("*.py")\n',
+                         'FOUND = Path(".").rglob("*")\n', 'FOUND = Path("scripts").iterdir()\n',
+                         'FOUND = Path("scripts").walk()\n', 'FOUND = Path("evidence").glob(PATTERN)\n',
+                         'FOUND = Path("evidence").glob("*.js")\n', 'FOUND = Path("evidence").glob("*.j*")\n',
+                         'FOUND = HERE.glob("*.json")\n', 'from os import listdir\nFOUND = listdir("scripts")\n'):
+            with self.subTest(addition=addition):
+                self.assert_entry_rejected(SYNTHETIC_ENTRYPOINT + addition, 'enumerates a repository directory')
+        # A literal, wildcard-free data suffix cannot select code (the Lyte
+        # publisher's run-local replay journal guard); AST traversal is not I/O.
+        self.entry = SYNTHETIC_ENTRYPOINT + (
+            'import ast\nNODES = list(ast.walk(ast.parse("x = 1")))\n'
+            'def retained(intent):\n    return list(intent.parent.glob("*.json"))\n')
+        self.admit()
+        self.assertEqual(self.run_contract()['state'], 'DELEGATED')
+    def test_javascript_and_typescript_references_are_code(self):
+        """Thread 3: the analyzer and workflow roots share one code-suffix set."""
+        for suffix in ('.mjs', '.cjs', '.js', '.ts'):
+            self.assertIn(suffix, owner.CODE_SUFFIXES)
+            with self.subTest(suffix=suffix):
+                self.assert_entry_rejected(SYNTHETIC_ENTRYPOINT + f'ASSET = HERE / "fixture_bundle{suffix}"\n',
+                                           'unreviewed repository path')
+    def test_scope_selector_must_be_os_environ_and_drive_the_dispatch(self):
+        """Thread 4: bind the real selector shape, not any `.get(...)` mention."""
+        selector = 'scope = os.environ.get("SZL_FLAGSHIP_SCOPE", "estate")'
+        dispatch = '    if scope == "lyte":\n'
+        for name, entry in {
+                'decoy-receiver': SYNTHETIC_ENTRYPOINT.replace(selector,
+                    'scope = settings.get("SZL_FLAGSHIP_SCOPE", "estate")'),
+                'decoy-environ-name': SYNTHETIC_ENTRYPOINT.replace(selector,
+                    'scope = environ.get("SZL_FLAGSHIP_SCOPE", "estate")'),
+                'unassigned': SYNTHETIC_ENTRYPOINT.replace(selector,
+                    'os.environ.get("SZL_FLAGSHIP_SCOPE", "estate")\n    scope = "lyte"'),
+                'not-dispatched': SYNTHETIC_ENTRYPOINT.replace(dispatch, '    if other_scope == "lyte":\n'),
+                'reassigned': SYNTHETIC_ENTRYPOINT.replace(dispatch, '    scope = "lyte"\n' + dispatch),
+                'module-level': SYNTHETIC_ENTRYPOINT.replace('    ' + selector + '\n', '') + selector + '\n'}.items():
+            with self.subTest(name=name):
+                self.assert_entry_rejected(entry, 'default estate scope selector')
+        self.entry = SYNTHETIC_ENTRYPOINT.replace('os.environ.get(', 'os.getenv(')
+        self.admit()
+        self.assertEqual(self.run_contract()['publisher_execution_closure']['entrypoint_default_scope'], 'estate')
+
     # --- Production CLI ordering: reject before evidence, checkout reads or receipt ---
     def cli_inputs(self):
         inputs = {f'publisher/{path}': text for path, text in self.dependencies.items()}
@@ -560,8 +656,8 @@ class DynamicOwnershipContract(OwnershipContract):
         mocks['evidence'].assert_called_once_with()
         self.assertEqual(mocks['checkout'].call_count, 3)
         mocks['tip'].assert_called_once()
-        self.assertTrue({f'publisher/{path}' for path in (EXPECTED_PUBLISHER, EXPECTED_ENTRYPOINT,
-                         *EXPECTED_DEPENDENCIES)} <= set(mocks['reads']))
+        self.assertLessEqual({f'publisher/{path}' for path in (EXPECTED_PUBLISHER, EXPECTED_ENTRYPOINT,
+                              *EXPECTED_DEPENDENCIES)}, set(mocks['reads']))
         receipt = json.loads(mocks['receipt'].call_args.args[0])
         self.assertIs(receipt['backend_tip_reverified'], True)
         closure = receipt['publisher_execution_closure']
