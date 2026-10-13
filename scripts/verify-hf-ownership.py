@@ -20,11 +20,22 @@ SOURCE_REQUIRED_CHECKS = (
     'responsive-overflow', 'bundle-budget', 'container-build', 'container-smoke',
     'source-binding',
 )
-# Reviewed immutable a11oy@88ab7ab539c779f2a026bdd6cff5193a950289c6 blobs.
-# Publisher pins the reviewed controller 10cb5f7665ab5469c876c3418888a71f521fd76b.
+# Reviewed immutable a11oy@a2a9292346fa02d4c239564b6773f704204ea541 blobs.
+# Publisher pins controller 163a61fd9759e5ecc3c2daf13e528f7b281ff81d.
+# Admission scope and dependent source identities: docs/lyte-publisher-admission.md.
 # A new publisher/resolver or entrypoint requires a separate authority review.
-DYNAMIC_PUBLISHER_BLOB = '0dfd432f5311cd6c5ed3999b7ee5dab98bbffd48'
-DYNAMIC_ENTRYPOINT_BLOB = 'cdbe1577313c138d9cf8af294509e6c502d67a5b'
+DYNAMIC_PUBLISHER_BLOB = '7c533d753a2b913a77bb71074f04aa5b753b0392'
+DYNAMIC_ENTRYPOINT_BLOB = '508293e2631f0f7b952cfe06eb4836fdd81cffa4'
+# Bind the Lyte execution closure, including the workflow's source/plan gates.
+DYNAMIC_DEPENDENCY_BLOBS = {
+    '.github/workflows/hf-sync.yml': '6facc0d1eb48db3033600a101729b971e256aa48',
+    'scripts/szl_release_guard.py': 'f6c7bc02df02076388be5fa0b6949d8929cc2ba2',
+    'scripts/lyte_enterprise_live_contract.py': '494116f65b24ea5b8a516abde31668be2248cbf4',
+    'scripts/hf_existing_space_guard.py': '364e0bba7dc4e0abb7730f210263b3fd4387d144',
+    'scripts/hf_exact_main_ownership.py': '6e95133ac74f0d05d5372ed68022a691ceaa15c2',
+    'scripts/estate_repair_dispatch.py': '81f0e83729390ee66b633a8d45e5f1139374ba41',
+    'scripts/estate_child_completion.py': '5e59e91824d58da9bcc650c623c3bdfaf6f0040b',
+}
 
 class ContractError(ValueError):
     """A publication authority or exact-source invariant is missing."""
@@ -32,6 +43,20 @@ class ContractError(ValueError):
 def git_blob(source: str) -> str:
     payload = source.encode('utf-8')
     return hashlib.sha1(f'blob {len(payload)}\0'.encode('ascii') + payload).hexdigest()
+
+def validate_publisher_closure(publisher: str, entrypoint: str, workflow: str,
+                               dependencies: dict[str, str] | None) -> None:
+    if (git_blob(publisher) != DYNAMIC_PUBLISHER_BLOB
+            or git_blob(entrypoint) != DYNAMIC_ENTRYPOINT_BLOB):
+        raise ContractError('Dynamic publisher and entrypoint require reviewed exact Git blobs')
+    if not isinstance(dependencies, dict) or set(dependencies) != set(DYNAMIC_DEPENDENCY_BLOBS):
+        raise ContractError('Complete reviewed publisher dependency closure is required')
+    for path, expected in DYNAMIC_DEPENDENCY_BLOBS.items():
+        source = dependencies[path]
+        if not isinstance(source, str) or git_blob(source) != expected:
+            raise ContractError(f'Publisher dependency requires a reviewed exact Git blob: {path}')
+    if dependencies['.github/workflows/hf-sync.yml'] != workflow:
+        raise ContractError('Reviewed publisher workflow and supplied workflow disagree')
 
 def verified_source_revision(head: dict) -> str:
     value = head.get('sha')
@@ -154,7 +179,8 @@ def validate_caller(text: str) -> None:
 
 def validate(alignment: dict, publisher: str, entrypoint: str, workflow: str,
              caller: str, readme: str, *, source_head: dict | None = None,
-             source_checks: dict | None = None) -> dict:
+             source_checks: dict | None = None,
+             publisher_dependencies: dict[str, str] | None = None) -> dict:
     validate_card(readme)
     validate_caller(caller)
     if alignment.get('schema') != 'szl.estate.alignment/v1':
@@ -175,9 +201,8 @@ def validate(alignment: dict, publisher: str, entrypoint: str, workflow: str,
     revision = owner.get('SOURCE_REVISION')
     dynamic = 'SOURCE_REVISION' not in owner
     if dynamic:
-        if (git_blob(publisher) != DYNAMIC_PUBLISHER_BLOB
-                or git_blob(entrypoint) != DYNAMIC_ENTRYPOINT_BLOB
-                or owner.get('SOURCE_VARIABLE') != 'LYTE_SOURCE_REVISION'
+        validate_publisher_closure(publisher, entrypoint, workflow, publisher_dependencies)
+        if (owner.get('SOURCE_VARIABLE') != 'LYTE_SOURCE_REVISION'
                 or owner.get('SOURCE_REQUIRED_CHECKS') != SOURCE_REQUIRED_CHECKS):
             raise ContractError('Dynamic publisher and entrypoint require reviewed exact Git blobs')
         if source_head is None or source_checks is None:
@@ -228,17 +253,21 @@ def main() -> int:
              'workflow': args.publisher / '.github/workflows/hf-sync.yml',
              'caller': args.source / '.github/workflows/hf-deploy.yml',
              'readme': args.source / 'README.md'}
-    content = {key: path.read_text(encoding='utf-8') for key, path in paths.items()}
-    source = {}
+    content = {key: path.read_bytes().decode('utf-8') for key, path in paths.items()}
+    # Every production CLI invocation admits the entire reviewed closure first.
+    # Adding a legacy static SOURCE_REVISION must not bypass blob admission.
+    dependencies = {path: (args.publisher / path).read_bytes().decode('utf-8')
+                    for path in DYNAMIC_DEPENDENCY_BLOBS}
+    validate_publisher_closure(content['publisher'], content['entrypoint'],
+                               content['workflow'], dependencies)
+    source = {'publisher_dependencies': dependencies}
     if 'SOURCE_REVISION' not in constants(content['publisher']):
-        # Reject unreviewed publisher changes before even reading backend state.
-        if git_blob(content['publisher']) != DYNAMIC_PUBLISHER_BLOB or git_blob(content['entrypoint']) != DYNAMIC_ENTRYPOINT_BLOB:
-            raise ContractError('Dynamic publisher and entrypoint require reviewed exact Git blobs')
         source['source_head'], source['source_checks'] = read_source_evidence()
     result = validate(json.loads(content['alignment']), content['publisher'], content['entrypoint'], content['workflow'], content['caller'], content['readme'], **source)
     result['checkout_revisions'] = {'presentation': revision(args.source), 'governance': revision(args.governance), 'publisher': revision(args.publisher)}
     result['input_sha256'] = {key: hashlib.sha256(value.encode()).hexdigest() for key, value in content.items()}
-    if source:
+    result['publisher_dependency_blobs'] = dict(DYNAMIC_DEPENDENCY_BLOBS)
+    if 'source_head' in source:
         require_current_source(result['backend_source_revision'])
         result['backend_tip_reverified'] = True
     args.output.parent.mkdir(parents=True, exist_ok=True)
