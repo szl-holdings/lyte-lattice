@@ -34,6 +34,7 @@ DYNAMIC_DEPENDENCY_BLOBS = {
     'scripts/hf_existing_space_guard.py': '364e0bba7dc4e0abb7730f210263b3fd4387d144',
     'scripts/hf_exact_main_ownership.py': '6e95133ac74f0d05d5372ed68022a691ceaa15c2',
     'scripts/estate_repair_dispatch.py': '81f0e83729390ee66b633a8d45e5f1139374ba41',
+    'scripts/estate_child_completion.py': '5e59e91824d58da9bcc650c623c3bdfaf6f0040b',
 }
 
 class ContractError(ValueError):
