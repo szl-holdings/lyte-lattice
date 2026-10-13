@@ -28,20 +28,26 @@ follow a confirmed publication, with another current-source and target check.
 Runtime verification remains a separate final phase. The release journal is
 unsigned evidence and grants no action authority.
 
-Dependent source identities inspected at the same publisher commit:
+Dependent source identities admitted at the same publisher commit:
 
 | Dependency | Git blob |
 | --- | --- |
 | `scripts/szl_release_guard.py` | `f6c7bc02df02076388be5fa0b6949d8929cc2ba2` |
 | `scripts/lyte_enterprise_live_contract.py` | `494116f65b24ea5b8a516abde31668be2248cbf4` |
 | `scripts/hf_existing_space_guard.py` | `364e0bba7dc4e0abb7730f210263b3fd4387d144` |
+| `.github/workflows/hf-sync.yml` | `6facc0d1eb48db3033600a101729b971e256aa48` |
+| `scripts/hf_exact_main_ownership.py` | `6e95133ac74f0d05d5372ed68022a691ceaa15c2` |
+| `scripts/estate_repair_dispatch.py` | `81f0e83729390ee66b633a8d45e5f1139374ba41` |
 
 The publisher's separately pinned controller is
 `szl-holdings/.github@163a61fd9759e5ecc3c2daf13e528f7b281ff81d`, path
 `.github/scripts/hf_deploy_from_dockerfile.py`, Git blob
 `3fa968416a3623d66b5b5b64abf8b830cc854e1c`. Its fetched bytes are checked against
-that blob before execution. These dependency identities record the review
-scope; the presentation verifier's existing two-blob gate is unchanged.
+that blob before execution. The verifier checks every local dependency blob above before fetching source
+evidence or emitting a delegation receipt. Missing or modified workflow, source
+and plan gates, release guard, live contract or existing-Space guard fail closed.
+Unrelated publisher-repository commits remain admissible only when this entire
+reviewed Lyte closure is byte-identical; the exact checkout revision is recorded.
 
 No provider code is executed by this presentation verifier. Its source checks,
 current-tip recheck, canonical-target policy, read-only permissions, and
