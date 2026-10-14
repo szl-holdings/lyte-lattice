@@ -6,6 +6,7 @@ import copy
 import importlib.util
 import json
 from pathlib import Path
+import re
 import sys
 import unittest
 from unittest.mock import patch
@@ -709,6 +710,79 @@ class DynamicOwnershipContract(OwnershipContract):
                 with self.cli(self.cli_inputs()) as mocks, self.assertRaises(owner.ContractError):
                     owner.main()
                 self.assert_nothing_after_rejection(mocks)
+
+    # --- Production registry: changed bound bytes are refused before any effect ---
+    @contextlib.contextmanager
+    def production_cli(self, inputs, admitted):
+        """The production CLI with `admitted` overriding only those registry entries.
+
+        Every other entry keeps its real reviewed blob. Each effect the CLI can
+        have after admission is a recorder: source evidence and the tip recheck
+        (network), checkout revisions (subprocess), and the receipt directory,
+        file and stdout copy (writers). Lower-level network, process and byte
+        writers are recorded too, in case a path bypasses those helpers.
+        """
+        def read_bytes(path):
+            return inputs[path.as_posix()].encode()
+        dependencies = dict(owner.DYNAMIC_DEPENDENCY_BLOBS)
+        dependencies.update({path: blob for path, blob in admitted.items() if path in dependencies})
+        with contextlib.ExitStack() as stack:
+            if EXPECTED_PUBLISHER in admitted:
+                stack.enter_context(patch.object(owner, 'DYNAMIC_PUBLISHER_BLOB', admitted[EXPECTED_PUBLISHER]))
+            if EXPECTED_ENTRYPOINT in admitted:
+                stack.enter_context(patch.object(owner, 'DYNAMIC_ENTRYPOINT_BLOB', admitted[EXPECTED_ENTRYPOINT]))
+            stack.enter_context(patch.object(owner, 'DYNAMIC_DEPENDENCY_BLOBS', dependencies))
+            stack.enter_context(patch.object(sys, 'argv', ['verify-hf-ownership.py', '--source', 'source',
+                '--governance', 'governance', '--publisher', 'publisher', '--output', 'evidence/receipt.json']))
+            stack.enter_context(patch.object(Path, 'read_bytes', autospec=True, side_effect=read_bytes))
+            effects = {'evidence': patch.object(owner, 'read_source_evidence', return_value=(self.head, self.checks)),
+                       'tip': patch.object(owner, 'github_json', return_value=self.head),
+                       'checkout': patch.object(owner, 'revision', return_value='c' * 40),
+                       'mkdir': patch.object(Path, 'mkdir'),
+                       'receipt': patch.object(Path, 'write_text'),
+                       'stdout': patch('builtins.print'),
+                       'opener': patch('urllib.request.build_opener'),
+                       'urlopen': patch('urllib.request.urlopen'),
+                       'subprocess': patch('subprocess.check_output'),
+                       'bytes': patch.object(Path, 'write_bytes')}
+            yield {name: stack.enter_context(item) for name, item in effects.items()}
+    def test_cli_refuses_changed_production_registry_bytes_before_any_effect(self):
+        """Each production-bound path keeps its real reviewed blob while every other
+        entry admits the inert fixture, so only that path's changed bytes can refuse."""
+        production = {EXPECTED_PUBLISHER: owner.DYNAMIC_PUBLISHER_BLOB,
+                      EXPECTED_ENTRYPOINT: owner.DYNAMIC_ENTRYPOINT_BLOB, **owner.DYNAMIC_DEPENDENCY_BLOBS}
+        fixture = {EXPECTED_PUBLISHER: self.admitted_publisher,
+                   EXPECTED_ENTRYPOINT: self.admitted_entrypoint, **self.admitted_dependencies}
+        expected_paths = {EXPECTED_PUBLISHER, EXPECTED_ENTRYPOINT, *EXPECTED_DEPENDENCIES}
+        self.assertEqual((set(production), set(fixture)), (expected_paths, expected_paths))
+        inputs = self.cli_inputs()
+        # Positive control: with every entry admitting the fixture, the recorders
+        # observe the full run, so their silence below is not vacuous.
+        with self.production_cli(inputs, fixture) as effects:
+            self.assertEqual(owner.main(), 0)
+        for name in ('evidence', 'tip', 'checkout', 'mkdir', 'receipt', 'stdout'):
+            self.assertTrue(effects[name].called, name)
+        for name in ('opener', 'urlopen', 'subprocess', 'bytes'):
+            effects[name].assert_not_called()
+        cases = {'entire-production-registry': {}}
+        cases.update({path: {other: blob for other, blob in fixture.items() if other != path}
+                      for path in sorted(production)})
+        for name, admitted in cases.items():
+            with self.subTest(production_bound=name):
+                if name in production:
+                    self.assertNotEqual(fixture[name], production[name])
+                message = ('reviewed exact Git blobs' if name not in EXPECTED_DEPENDENCIES
+                           else 'reviewed exact Git blob: ' + re.escape(name) + '$')
+                with self.production_cli(inputs, admitted) as effects, \
+                        self.assertRaisesRegex(owner.ContractError, message):
+                    owner.main()
+                for effect, recorder in effects.items():
+                    with self.subTest(production_bound=name, effect=effect):
+                        recorder.assert_not_called()
+        # The production registry itself was never edited to make a case pass.
+        self.assertEqual(production, {EXPECTED_PUBLISHER: owner.DYNAMIC_PUBLISHER_BLOB,
+                                      EXPECTED_ENTRYPOINT: owner.DYNAMIC_ENTRYPOINT_BLOB,
+                                      **owner.DYNAMIC_DEPENDENCY_BLOBS})
 
 
 class PublisherIsolation(unittest.TestCase):
