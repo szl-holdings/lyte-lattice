@@ -94,25 +94,46 @@ verifier makes four checks:
 1. Every admitted path must have its exact reviewed blob; CRLF and LF bytes are
    distinct identities. The supplied workflow must equal the admitted copy.
 2. The entrypoint must read `SZL_FLAGSHIP_SCOPE` exactly once, through
-   `os.environ.get` or `os.getenv` with the literal default `estate`. That read
-   must be the only assignment to its name inside one function, and that name
-   must drive the `if scope == "lyte": return ...` dispatch branch. The invoking
-   job and the workflow-level env may select only `estate` or `lyte`.
+   `os.environ.get` or `os.getenv` with the literal default `estate`. `os` must
+   be the genuine module: imported, never rebound, shadowed by a parameter,
+   patched (`os.environ = ...`) or passed on. That read must be the only binding
+   of its name inside a module-level function, and that function must be what
+   `if __name__ == "__main__":` runs, with no exit before the selector. The
+   verifier then evaluates the dispatch for each admitted value. `estate` must
+   fall through every scope test to the estate route, and `lyte` must leave
+   through the return of `if scope == "lyte":`. Scope tests may compare with a
+   literal (`==`, `!=`) or test membership (`in`, `not in`) in a literal set or
+   a single literal module constant. Anything else fails closed: an
+   unevaluable test, a scope use inside a loop, `try` or nested function, or a
+   branch that captures either value first. The invoking job and the
+   workflow-level env may select only `estate` or `lyte`.
 3. The workflow roots are every repository program the invoking job runs, and
    the closure is derived from them statically, with AST only and no
    execution. The derivation follows `__file__`-anchored paths (`HERE / "x.py"`,
    `with_name`, `parents[n]`), `scripts/...` literals, sibling imports,
    `importlib`/`runpy` targets and `-m` module arguments, transitively.
-   Python, shell and JavaScript/TypeScript suffixes are all code. The following
-   fail closed:
+   Python, shell and JavaScript/TypeScript suffixes are all code, including
+   `.jsx`, `.tsx`, `.mts` and `.cts`. The following fail closed:
    - a relative import, or a path escaping the repository;
    - any import outside the standard library and `huggingface_hub`;
    - a loader target unless it is a literal, a `__file__`-anchored path, or a
      parameter whose every same-module call site resolves the same way (the
-     entrypoint's `load_module` chain);
+     entrypoint's `load_module` chain). The anchor must be exact where the
+     loader runs. Every binding the load can observe in its own scope must be
+     an anchored assignment. An anchor in an unrelated function, or one
+     overwritten by any other binding (assignment, loop, `with`, `except`,
+     walrus, augmented assignment, import, `global`, parameter), does not
+     count. Neither does a rebound `__file__`, a non-genuine `os.path` or a
+     shadowed `pathlib` constructor;
    - any directory enumeration (`os.listdir`, `os.scandir`, `os.walk`,
      `glob.glob`/`iglob`, `Path.glob`/`rglob`/`iterdir`/`walk`), anchored or
-     not, because the job runs at the repository root. The one exception is a
+     not, because the job runs at the repository root. Listing is recognised
+     by name on any receiver, and through aliases: `import os as o`,
+     `from os import listdir as ls`, `from os import *`, `L = os.listdir`, and
+     by string through `getattr`, `methodcaller` or subscripts. A listing
+     module may appear only as an attribute receiver or in a literal
+     `getattr` probe, such as the release guard's `getattr(os, "O_NOFOLLOW", 0)`.
+     Only the genuine `ast` module's `walk` is exempt. The one exception is a
      glob on an unanchored path whose literal pattern ends in a concrete,
      wildcard-free, non-code suffix. That covers the Lyte publisher's
      run-local `*.json` replay-journal check, which cannot select code.
@@ -141,7 +162,10 @@ recorded.
   actions and the `huggingface_hub` package.
 - The derivation is static. It cannot see paths passed indirectly through
   helper parameters from non-literal sources, so exact-blob review remains the
-  authority for that.
+  authority for that. The same applies to dynamic namespace writes
+  (`globals()[...]`, `exec`), attribute names computed on objects other than
+  a listing module, in-process environment mutation before the scope read,
+  and what each dispatch branch's call does once reached.
 - The generated-flagship publisher runs before Lyte in the same process and can
   poll for up to 30 minutes inside a 50-minute job. That is an availability
   risk for the Lyte publication, not an authority change.

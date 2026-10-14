@@ -227,6 +227,8 @@ def main():
     run_publisher("flagships", FLAGSHIP_IMPL, finance_only=False)
     run_publisher("lyte", LYTE_IMPL)
     return run_publisher("combined", COMBINED_IMPL)
+if __name__ == "__main__":
+    raise SystemExit(main())
 '''
 
 
@@ -615,6 +617,197 @@ class DynamicOwnershipContract(OwnershipContract):
         self.entry = SYNTHETIC_ENTRYPOINT.replace('os.environ.get(', 'os.getenv(')
         self.admit()
         self.assertEqual(self.run_contract()['publisher_execution_closure']['entrypoint_default_scope'], 'estate')
+
+    # --- #45 follow-up: six narrower analyzer cases, independent inert fixtures ---
+    def assert_entry_admitted(self, entry):
+        self.entry = entry
+        self.admit()
+        return self.run_contract()['publisher_execution_closure']
+    SIBLING = 'scripts/hf_publish_vertical_services_frontier_v3.py'
+    def run_with_sibling(self, addition):
+        """Append to a transitive sibling, analysed exactly as the entrypoint is."""
+        self.entry = SYNTHETIC_ENTRYPOINT
+        self.dependencies[self.SIBLING] = synthetic_sources()[self.SIBLING] + addition
+        self.admit()
+        return self.run_contract()['publisher_execution_closure']
+    def test_enumerator_aliases_fail_closed(self):
+        """Case 1: an alias of a listing function or module reaches the same listing."""
+        for addition in ('import os as fixture_os\nFOUND = fixture_os.listdir("scripts")\n',
+                         'import os as fixture_os\nFOUND = list(fixture_os.scandir("."))\n',
+                         'import glob as fixture_glob\nFOUND = list(fixture_glob.iglob("scripts/*.py"))\n',
+                         'import posix as fixture_posix\nFOUND = fixture_posix.listdir("scripts")\n',
+                         'from os import listdir as fixture_list\nFOUND = fixture_list("scripts")\n',
+                         'from os import walk as fixture_walk\nFOUND = list(fixture_walk("scripts"))\n',
+                         'from glob import iglob as fixture_iglob\nFOUND = list(fixture_iglob("*.py"))\n',
+                         'from os import *\nFIXTURE_LIST = listdir\n',
+                         'FIXTURE_LIST = os.listdir\nFOUND = FIXTURE_LIST("scripts")\n',
+                         'FIXTURE_ITER = Path("scripts").iterdir\nFOUND = list(FIXTURE_ITER())\n',
+                         'FOUND = getattr(os, "listdir")("scripts")\n',
+                         'FOUND = vars(os)["scandir"](".")\n',
+                         'import operator\nFOUND = list(operator.methodcaller("iterdir")(Path("scripts")))\n',
+                         'FIXTURE_NAME = "listdir"\nFOUND = getattr(os, FIXTURE_NAME)("scripts")\n'):
+            with self.subTest(addition=addition), \
+                    self.assertRaisesRegex(owner.ContractError, 'enumerates a repository directory'):
+                self.run_with_sibling('import os\n' + addition)
+        # Kept: a literal-attribute getattr on os (the real release guard's
+        # O_NOFOLLOW probe) and an aliased glob of the admitted data shape.
+        for addition in ('FIXTURE_FLAGS = getattr(os, "O_NOFOLLOW", 0)\n',
+                         'import glob as fixture_glob\nFOUND = fixture_glob.glob("*.json")\n'):
+            with self.subTest(admitted=addition):
+                self.assertEqual(self.run_with_sibling('import os\n' + addition)['workflow_scopes'], ['estate'])
+    def test_unrelated_scope_or_overwritten_anchor_does_not_resolve_a_loader(self):
+        """Case 2: only the binding that actually reaches the loader may anchor it."""
+        loader = 'importlib.util.spec_from_file_location'
+        lyte = 'HERE / "hf_publish_lyte_enterprise.py"'
+        for name, addition in {
+                'other-function-anchor': (f'def fixture_anchor():\n    fixture_target = {lyte}\n    return fixture_target\n'
+                                          'def fixture_load():\n    fixture_target = Path(FIXTURE_ELSEWHERE)\n'
+                                          f'    return {loader}("x", fixture_target)\n'),
+                'other-function-only': (f'def fixture_anchor():\n    fixture_target = {lyte}\n    return fixture_target\n'
+                                        f'def fixture_load():\n    return {loader}("x", fixture_target)\n'),
+                'parameter-shadows-module-anchor': (f'def fixture_load(HERE):\n    return {loader}("x", {lyte})\n'
+                                                    'fixture_load(Path(FIXTURE_ELSEWHERE))\n'),
+                'reassigned': f'FIXTURE_TARGET = {lyte}\nFIXTURE_TARGET = Path(FIXTURE_ELSEWHERE)\n{loader}("x", FIXTURE_TARGET)\n',
+                'loop-target': (f'FIXTURE_TARGET = {lyte}\nfor FIXTURE_TARGET in FIXTURE_CANDIDATES:\n    pass\n'
+                                f'{loader}("x", FIXTURE_TARGET)\n'),
+                'augmented': f'FIXTURE_TARGET = HERE\nFIXTURE_TARGET /= FIXTURE_ELSEWHERE\n{loader}("x", FIXTURE_TARGET)\n',
+                'walrus': (f'FIXTURE_TARGET = {lyte}\nif (FIXTURE_TARGET := Path(FIXTURE_ELSEWHERE)):\n    pass\n'
+                           f'{loader}("x", FIXTURE_TARGET)\n'),
+                'import-alias': f'FIXTURE_TARGET = {lyte}\nfrom os import curdir as FIXTURE_TARGET\n{loader}("x", FIXTURE_TARGET)\n',
+                'global-rebind': (f'FIXTURE_TARGET = {lyte}\ndef fixture_rebind():\n    global FIXTURE_TARGET\n'
+                                  f'    FIXTURE_TARGET = Path(FIXTURE_ELSEWHERE)\nfixture_rebind()\n{loader}("x", FIXTURE_TARGET)\n'),
+                'exception-name': (f'FIXTURE_TARGET = {lyte}\ntry:\n    pass\nexcept Exception as FIXTURE_TARGET:\n    pass\n'
+                                   f'{loader}("x", FIXTURE_TARGET)\n'),
+                'rebound-file': f'__file__ = FIXTURE_ELSEWHERE\n{loader}("x", Path(__file__).with_name("hf_publish_lyte_enterprise.py"))\n',
+                'parameter-rebound-by-import': (f'def fixture_load(target):\n    from os import curdir as target\n'
+                                                f'    return {loader}("x", target)\nfixture_load(LYTE_IMPL)\n'),
+                }.items():
+            with self.subTest(name=name):
+                self.assert_entry_rejected(SYNTHETIC_ENTRYPOINT + addition, 'computed module path')
+        # Kept: a function-local anchor, and a name every binding of which is anchored.
+        for addition in (f'def fixture_load():\n    fixture_target = {lyte}\n    return {loader}("x", fixture_target)\nfixture_load()\n',
+                         f'FIXTURE_TARGET = LYTE_IMPL\nFIXTURE_TARGET = RELEASE_GUARD_IMPL\n{loader}("x", FIXTURE_TARGET)\n'):
+            with self.subTest(admitted=addition):
+                self.assertEqual(self.assert_entry_admitted(SYNTHETIC_ENTRYPOINT + addition)['workflow_scopes'], ['estate'])
+    def test_jsx_tsx_mts_and_cts_references_are_code(self):
+        """Case 3: every executable JS/TS suffix is code, in sources and workflow steps."""
+        step = '      - run: python -I -B scripts/estate_child_completion.py\n'
+        for suffix in ('.jsx', '.tsx', '.mts', '.cts'):
+            with self.subTest(suffix=suffix, form='code-suffix'):
+                self.assertIn(suffix, owner.CODE_SUFFIXES)
+            for form, addition, message in (
+                    ('anchored', f'ASSET = HERE / "fixture_bundle{suffix}"\n', 'unreviewed repository path'),
+                    ('literal', f'ASSET = "scripts/fixture_bundle{suffix}"\n', 'unreviewed repository path'),
+                    ('listing', f'FOUND = Path("evidence").glob("*{suffix}")\n', 'enumerates a repository directory')):
+                with self.subTest(suffix=suffix, form=form):
+                    self.assert_entry_rejected(SYNTHETIC_ENTRYPOINT + addition, message)
+            with self.subTest(suffix=suffix, form='workflow-step'), \
+                    self.assertRaisesRegex(owner.ContractError, 'unreviewed repository path'):
+                self.entry = SYNTHETIC_ENTRYPOINT
+                self.set_workflow(SYNTHETIC_WORKFLOW.replace(step, step + f'      - run: node scripts/fixture_step{suffix}\n'))
+                self.run_contract()
+            self.set_workflow(SYNTHETIC_WORKFLOW)
+    def test_rebound_or_shadowed_ast_does_not_exempt_a_listing(self):
+        """Case 4: only the genuine `ast` module's walk is AST traversal."""
+        for name, addition in {
+                'module-alias': 'import os as ast\nFOUND = list(ast.walk("scripts"))\n',
+                'reassigned': 'import ast\nast = Path("scripts")\nFOUND = list(ast.glob("*.py"))\n',
+                'rebound-to-os': 'import ast\nast = os\nFOUND = list(ast.walk("scripts"))\n',
+                'parameter': 'import ast\ndef fixture_scan(ast):\n    return list(ast.walk())\nfixture_scan(Path("scripts"))\n',
+                'loop-target': 'import ast\nfor ast in (Path("scripts"),):\n    FOUND = list(ast.iterdir())\n',
+                'context-target': 'import ast\nwith FIXTURE_CONTEXT as ast:\n    FOUND = list(ast.rglob("*.py"))\n',
+                'imported-function': 'from os import walk as ast\nFOUND = list(ast("scripts"))\n'}.items():
+            with self.subTest(name=name), \
+                    self.assertRaisesRegex(owner.ContractError, 'enumerates a repository directory'):
+                self.run_with_sibling('import os\n' + addition)
+        genuine = 'import ast\nNODES = list(ast.walk(ast.parse("x = 1")))\n'
+        self.assertEqual(self.run_with_sibling(genuine)['workflow_scopes'], ['estate'])
+        self.assertEqual(self.assert_entry_admitted(SYNTHETIC_ENTRYPOINT + genuine)['workflow_scopes'], ['estate'])
+    def test_rebound_or_shadowed_os_is_not_the_environment_or_a_path_anchor(self):
+        """Case 5: the scope read and os.path anchors need the genuine `os` module."""
+        main = 'def main():\n'
+        selector = '    scope = os.environ.get("SZL_FLAGSHIP_SCOPE", "estate")\n'
+        for name, entry in {
+                'module-rebound': SYNTHETIC_ENTRYPOINT.replace(main, 'os = FIXTURE_SETTINGS\n' + main),
+                'stdlib-alias': SYNTHETIC_ENTRYPOINT.replace('import os\n', 'import posix as os\n'),
+                'local-rebound': SYNTHETIC_ENTRYPOINT.replace(selector, '    os = FIXTURE_SETTINGS\n' + selector),
+                'parameter': SYNTHETIC_ENTRYPOINT.replace(main, 'def main(os=FIXTURE_SETTINGS):\n'),
+                'global-rebind': SYNTHETIC_ENTRYPOINT.replace(
+                    main, 'def fixture_swap():\n    global os\n    os = FIXTURE_SETTINGS\nfixture_swap()\n' + main),
+                'environ-replaced': SYNTHETIC_ENTRYPOINT.replace(main, 'os.environ = FIXTURE_ENVIRON\n' + main),
+                'getenv-replaced': SYNTHETIC_ENTRYPOINT.replace('os.environ.get(', 'os.getenv(').replace(
+                    main, 'os.getenv = FIXTURE_GETENV\n' + main),
+                'setattr': SYNTHETIC_ENTRYPOINT.replace(main, 'setattr(os, FIXTURE_MEMBER, FIXTURE_ENVIRON)\n' + main)}.items():
+            with self.subTest(name=name):
+                self.assert_entry_rejected(entry, 'default estate scope selector')
+        sibling_path = 'scripts/hf_publish_vertical_services_frontier_v3.py'
+        original = self.dependencies[sibling_path]
+        join = ('importlib.util.spec_from_file_location("x", os.path.join(os.path.dirname(__file__), '
+                '"hf_publish_vertical_services.py"))')
+        for name, addition in {
+                'path-parameter': f'import os\ndef fixture_load(os):\n    return {join}\nfixture_load(FIXTURE_PATHS)\n',
+                'path-rebound': f'import os\nos = FIXTURE_PATHS\nFIXTURE_SPEC = {join}\n',
+                'path-member-replaced': f'import os\nos.path = FIXTURE_PATHS\nFIXTURE_SPEC = {join}\n',
+                'path-function-replaced': f'import os\nos.path.join = FIXTURE_JOIN\nFIXTURE_SPEC = {join}\n'}.items():
+            with self.subTest(name=name), self.assertRaisesRegex(owner.ContractError, 'computed module path'):
+                self.entry = SYNTHETIC_ENTRYPOINT
+                self.dependencies[sibling_path] = original + addition
+                self.admit()
+                self.run_contract()
+        # Kept: the genuine environment read (with the real literal getattr
+        # probe beside it) and a genuine os.path anchor.
+        self.dependencies[sibling_path] = original + f'import os\nFIXTURE_SPEC = {join}\n'
+        self.assertEqual(self.assert_entry_admitted(SYNTHETIC_ENTRYPOINT.replace(
+            main, 'FIXTURE_FLAGS = getattr(os, "O_NOFOLLOW", 0)\n' + main))['entrypoint_default_scope'], 'estate')
+    def test_dispatcher_routes_estate_and_lyte_through_reachable_reviewed_branches(self):
+        """Case 6: evaluate the dispatcher for each admitted scope; no unreachable lookalike."""
+        dispatch = '    if scope == "lyte":\n        return publish_lyte_only()\n'
+        selector = '    scope = os.environ.get("SZL_FLAGSHIP_SCOPE", "estate")\n'
+        finance = '        return run_publisher("flagships", FLAGSHIP_IMPL, finance_only=True)\n'
+        guard = 'if __name__ == "__main__":\n    raise SystemExit(main())\n'
+        def nested(prefix):
+            return prefix + '        if scope == "lyte":\n            return publish_lyte_only()\n'
+        for name, entry in {
+                'nested-function': SYNTHETIC_ENTRYPOINT.replace(dispatch, nested('    def fixture_unused():\n')),
+                'dead-condition': SYNTHETIC_ENTRYPOINT.replace(dispatch, nested('    if False:\n')),
+                'loop-body': SYNTHETIC_ENTRYPOINT.replace(dispatch, nested('    for _ in ():\n')),
+                'except-handler': SYNTHETIC_ENTRYPOINT.replace(dispatch, nested('    try:\n        pass\n    except Exception:\n')),
+                'after-exit': SYNTHETIC_ENTRYPOINT.replace(dispatch, finance[4:] + dispatch),
+                'after-assert': SYNTHETIC_ENTRYPOINT.replace(dispatch, '    assert FIXTURE_READY\n' + dispatch),
+                'before-selector-exit': SYNTHETIC_ENTRYPOINT.replace(selector, finance[4:] + selector),
+                'estate-captured': SYNTHETIC_ENTRYPOINT.replace(dispatch, '    if scope == "estate":\n' + finance + dispatch),
+                'lyte-captured': SYNTHETIC_ENTRYPOINT.replace(dispatch, '    if scope in ("lyte", "finance"):\n' + finance + dispatch),
+                'inverted': SYNTHETIC_ENTRYPOINT.replace(dispatch, '    if scope != "lyte":\n' + finance + dispatch),
+                'else-branch': SYNTHETIC_ENTRYPOINT.replace(dispatch, dispatch + '    else:\n' + finance),
+                'unevaluable-test': SYNTHETIC_ENTRYPOINT.replace(dispatch, '    if scope:\n' + finance + dispatch),
+                'unmodeled-use': SYNTHETIC_ENTRYPOINT.replace(dispatch, dispatch + '    FIXTURE_SEEN.append(scope)\n'),
+                'uninvoked-dispatcher': SYNTHETIC_ENTRYPOINT.replace(guard, guard.replace('main()', 'publish_lyte_only()')),
+                'no-entry-guard': SYNTHETIC_ENTRYPOINT.replace(guard, ''),
+                'rebound-dispatcher': SYNTHETIC_ENTRYPOINT.replace(guard, 'main = publish_lyte_only\n' + guard)}.items():
+            with self.subTest(name=name):
+                self.assert_entry_rejected(entry, 'default estate scope selector')
+        # Kept: the real dispatcher shape, written independently. An unknown-scope
+        # guard, a guard-mode branch, single-target branches and then estate.
+        selectable = 'SOURCE_OWNED_FLAGSHIP_SLUGS = ("lyte",)\n'
+        multi = SYNTHETIC_ENTRYPOINT.replace(selectable, selectable + 'FIXTURE_SELECTABLE = ("terra", "sentra", "counsel")\n').replace(
+            'def run_publisher(name, path, *, finance_only=False):',
+            'def run_publisher(name, path, *, finance_only=False, selected_slug=None):').replace(dispatch, (
+                '    if scope not in ("estate", "finance", "lyte", *FIXTURE_SELECTABLE):\n'
+                '        raise RuntimeError("unknown fixture scope")\n'
+                '    if scope in FIXTURE_SELECTABLE:\n        fixture_mode = "existing-only"\n'
+                '    else:\n        fixture_mode = "default"\n'
+                '    if scope == "finance":\n' + finance + dispatch
+                + '    if scope in FIXTURE_SELECTABLE:\n'
+                '        return run_publisher("flagships", FLAGSHIP_IMPL, selected_slug=scope)\n'))
+        job = '  publish-vertical-flagships:\n    runs-on: ubuntu-latest\n'
+        self.set_workflow(SYNTHETIC_WORKFLOW.replace(job, job + '    env:\n      SZL_FLAGSHIP_SCOPE: lyte\n'))
+        closure = self.assert_entry_admitted(multi)
+        self.assertEqual((closure['entrypoint_default_scope'], closure['workflow_scopes']), ('estate', ['estate', 'lyte']))
+        for name, entry in {
+                'rebound-scope-set': multi.replace('def main():\n', 'FIXTURE_SELECTABLE = ("lyte",)\ndef main():\n'),
+                'computed-scope-set': multi.replace('("terra", "sentra", "counsel")', 'tuple(FIXTURE_SCOPES)')}.items():
+            with self.subTest(name=name):
+                self.assert_entry_rejected(entry, 'default estate scope selector')
 
     # --- Production CLI ordering: reject before evidence, checkout reads or receipt ---
     def cli_inputs(self):

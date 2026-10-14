@@ -72,8 +72,9 @@ ADMITTED_SCOPES = ('estate', 'lyte')
 # is treated as a repository sibling module and must itself be admitted.
 ADMITTED_EXTERNAL_IMPORTS = ('huggingface_hub',)
 # One executable-suffix set for closure references and workflow job programs.
+# JSX/TSX and the ESM/CJS TypeScript suffixes run under Node and its loaders.
 CODE_SUFFIXES = ('.py', '.pyw', '.pyc', '.pyz', '.pyd', '.pth', '.so', '.sh', '.bash',
-                 '.mjs', '.cjs', '.js', '.ts')
+                 '.mjs', '.cjs', '.js', '.ts', '.jsx', '.tsx', '.mts', '.cts')
 WORKFLOW_MODULES = ('pip',)
 
 class ContractError(ValueError):
@@ -115,16 +116,180 @@ def _is_os_path(node: ast.AST) -> bool:
     return (isinstance(node, ast.Attribute) and node.attr == 'path'
             and isinstance(node.value, ast.Name) and node.value.id == 'os')
 
-def _anchored(node: ast.AST, origin: str, names: dict[str, frozenset[str]]) -> frozenset[str] | None:
-    """Repository paths of an expression anchored at this file's own location."""
+_PATH_TYPES = ('Path', 'PurePath', 'PurePosixPath', 'PosixPath')
+_ENUMERATORS = ('listdir', 'scandir', 'walk', 'fwalk', 'glob', 'iglob', 'rglob', 'iterdir')
+_ENUMERATOR_MODULES = ('os', 'glob', 'posix', 'nt')
+
+class _Bindings:
+    """Every name binding in one module, by function scope; static, never executed.
+
+    A binding is an `assign` (`name = value` or `name: T = value`), an `import`
+    (recording the bound module or `module.member`), a `param`, or `other` (any
+    other form: loop, `with`, `except`, walrus, augmented, `del`, `def`, `class`,
+    comprehension or `match` target). Class bodies and comprehensions count
+    toward their enclosing function, which can only make a name less exact.
+    """
+    def __init__(self, tree: ast.Module):
+        self.sites: dict[str, list[tuple[ast.AST | None, str, Any]]] = {}
+        self.scope: dict[ast.AST, ast.AST | None] = {}
+        self.parent: dict[ast.AST, ast.AST | None] = {}
+        self.declared: set[str] = set()
+        self.mutated: set[str] = set()
+        self.star = False
+        self._simple: set[int] = set()
+        self._visit(tree, None)
+        receivers = {id(node.value) for node in ast.walk(tree) if isinstance(node, ast.Attribute)}
+        probes = {id(node.args[0]) for node in ast.walk(tree)
+                  if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                  and node.func.id == 'getattr' and len(node.args) in (2, 3) and not node.keywords
+                  and isinstance(node.args[1], ast.Constant) and isinstance(node.args[1].value, str)
+                  and node.args[1].value not in _ENUMERATORS}
+        # Loads other than an attribute receiver or a literal `getattr` probe.
+        self.escapes = {id(node) for node in ast.walk(tree) if isinstance(node, ast.Name)
+                        and isinstance(node.ctx, ast.Load)
+                        and id(node) not in receivers and id(node) not in probes}
+        self.escaped = {node.id for node in ast.walk(tree) if id(node) in self.escapes}
+
+    def _bind(self, name: str, scope: ast.AST | None, kind: str, value: Any) -> None:
+        self.sites.setdefault(name, []).append((scope, kind, value))
+
+    def _visit(self, node: ast.AST, scope: ast.AST | None) -> None:
+        self.scope[node] = scope
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+            self.parent[node] = scope
+            args = node.args
+            outer = [*args.defaults, *(item for item in args.kw_defaults if item is not None)]
+            inner: list[ast.AST] = [args]
+            if isinstance(node, ast.Lambda):
+                inner.append(node.body)
+            else:
+                self._bind(node.name, scope, 'other', node)
+                outer += [*node.decorator_list, *([node.returns] if node.returns else [])]
+                inner += [*node.body, *getattr(node, 'type_params', ())]
+            for item in (*args.posonlyargs, *args.args, args.vararg, *args.kwonlyargs, args.kwarg):
+                if item is not None:
+                    self._bind(item.arg, node, 'param', item)
+            for child in outer:
+                self._visit(child, scope)
+            self.scope[args] = node
+            for child in inner:
+                if child is args:
+                    for item in ast.iter_child_nodes(args):
+                        if item not in outer:
+                            self._visit(item, node)
+                else:
+                    self._visit(child, node)
+            return
+        if isinstance(node, ast.ClassDef):
+            self._bind(node.name, scope, 'other', node)
+        elif isinstance(node, (ast.Import, ast.ImportFrom)):
+            for alias in node.names:
+                if alias.name == '*':
+                    self.star = True
+                elif isinstance(node, ast.Import):
+                    top = alias.name.split('.', 1)[0]
+                    self._bind(alias.asname or top, scope, 'import', alias.name if alias.asname else top)
+                else:
+                    module = None if node.level else f'{node.module}.{alias.name}'
+                    self._bind(alias.asname or alias.name, scope, 'import', module)
+        elif isinstance(node, (ast.Global, ast.Nonlocal)):
+            self.declared.update(node.names)
+        elif isinstance(node, (ast.Assign, ast.AnnAssign)) and node.value is not None:
+            for target in node.targets if isinstance(node, ast.Assign) else [node.target]:
+                if isinstance(target, ast.Name):
+                    self._simple.add(id(target))
+                    self._bind(target.id, scope, 'assign', node)
+        elif isinstance(node, ast.ExceptHandler) and node.name:
+            self._bind(node.name, scope, 'other', node)
+        elif isinstance(node, (ast.MatchAs, ast.MatchStar)) and node.name:
+            self._bind(node.name, scope, 'other', node)
+        elif isinstance(node, ast.MatchMapping) and node.rest:
+            self._bind(node.rest, scope, 'other', node)
+        elif (isinstance(node, ast.Name) and not isinstance(node.ctx, ast.Load)
+              and id(node) not in self._simple):
+            self._bind(node.id, scope, 'other', node)
+        elif isinstance(node, ast.Attribute) and not isinstance(node.ctx, ast.Load):
+            root = node.value
+            while isinstance(root, ast.Attribute):
+                root = root.value
+            if isinstance(root, ast.Name):
+                self.mutated.add(root.id)
+        for child in ast.iter_child_nodes(node):
+            self._visit(child, scope)
+
+    def resolve(self, name: str, scope: ast.AST | None) -> list[tuple[ast.AST | None, str, Any]] | None:
+        """The bindings a load of `name` in `scope` observes; None when not exact."""
+        if self.star or name in self.declared:
+            return None
+        while True:
+            found = [site for site in self.sites.get(name, ()) if site[0] is scope]
+            if found:
+                return found
+            if scope is None:
+                return None
+            scope = self.parent[scope]
+
+    def module(self, name: str) -> str | None:
+        """The one module every binding of `name` imports, if nothing else binds or patches it."""
+        sites = self.sites.get(name, [])
+        modules = {value for _, kind, value in sites}
+        if (not sites or self.star or name in self.declared or name in self.mutated
+                or any(kind != 'import' for _, kind, _ in sites) or len(modules) != 1):
+            return None
+        return modules.pop()
+
+    def genuine(self, node: ast.AST, module: str) -> bool:
+        """`node` is the standard-library module itself: imported, never rebound, patched or passed on."""
+        return (isinstance(node, ast.Name) and self.module(node.id) == module
+                and node.id not in self.escaped)
+
+    def path_type(self, func: ast.AST) -> bool:
+        if isinstance(func, ast.Name):
+            return func.id in _PATH_TYPES and self.module(func.id) == f'pathlib.{func.id}'
+        return (isinstance(func, ast.Attribute) and func.attr in _PATH_TYPES
+                and self.genuine(func.value, 'pathlib'))
+
+class _ExactAnchors:
+    """Names for `_anchored` in one scope: anchored only if every binding the load can
+    observe there is an anchored assignment. Unlike the discovery union, an anchor in
+    an unrelated scope, or one overwritten by any other binding, does not count."""
+    def __init__(self, bindings: _Bindings, origin: str, scope: ast.AST | None,
+                 seen: frozenset[tuple[str, int]] = frozenset()):
+        self.bindings, self.origin, self.scope, self.seen = bindings, origin, scope, seen
+
+    def get(self, name: str) -> frozenset[str] | None:
+        sites = self.bindings.resolve(name, self.scope)
+        if not sites or any(kind != 'assign' for _, kind, _ in sites):
+            return None
+        result: set[str] = set()
+        for scope, _, node in sites:
+            key = (name, id(node))
+            if key in self.seen:
+                return None
+            names = _ExactAnchors(self.bindings, self.origin, scope, self.seen | {key})
+            value = _anchored(node.value, self.origin, names, self.bindings)
+            if value is None:
+                return None
+            result |= value
+        return frozenset(result)
+
+def _anchored(node: ast.AST, origin: str, names: dict[str, frozenset[str]] | _ExactAnchors,
+              trust: _Bindings | None = None) -> frozenset[str] | None:
+    """Repository paths of an expression anchored at this file's own location.
+
+    With `trust`, every anchor must be genuine: `__file__` never rebound, the real
+    `os` module and real `pathlib` constructors, and exactly scoped names.
+    """
     if isinstance(node, ast.Name):
-        return frozenset({origin}) if node.id == '__file__' else names.get(node.id)
+        if node.id == '__file__':
+            return frozenset({origin}) if trust is None or '__file__' not in trust.sites else None
+        return names.get(node.id)
     if isinstance(node, ast.Attribute) and node.attr == 'parent':
-        base = _anchored(node.value, origin, names)
+        base = _anchored(node.value, origin, names, trust)
         return None if base is None else frozenset(_parent(path) for path in base)
     if (isinstance(node, ast.Subscript) and isinstance(node.value, ast.Attribute)
             and node.value.attr == 'parents'):
-        base = _anchored(node.value.value, origin, names)
+        base = _anchored(node.value.value, origin, names, trust)
         if base is None:
             return None
         if not (isinstance(node.slice, ast.Constant) and type(node.slice.value) is int
@@ -137,7 +302,7 @@ def _anchored(node: ast.AST, origin: str, names: dict[str, frozenset[str]]) -> f
             result.add(path)
         return frozenset(result)
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
-        base = _anchored(node.left, origin, names)
+        base = _anchored(node.left, origin, names, trust)
         if base is None:
             return None
         part = _literal_part(node.right)
@@ -146,7 +311,9 @@ def _anchored(node: ast.AST, origin: str, names: dict[str, frozenset[str]]) -> f
         return None
     func, name = node.func, _call_name(node)
     if isinstance(func, ast.Attribute) and _is_os_path(func.value) and node.args:
-        base = _anchored(node.args[0], origin, names)
+        if trust is not None and not trust.genuine(func.value.value, 'os'):
+            return None
+        base = _anchored(node.args[0], origin, names, trust)
         if base is None:
             return None
         if name in ('abspath', 'realpath', 'normpath'):
@@ -157,14 +324,16 @@ def _anchored(node: ast.AST, origin: str, names: dict[str, frozenset[str]]) -> f
             parts = [_literal_part(arg) for arg in node.args[1:]]
             return frozenset(_join(path, '/'.join(parts)) for path in base)
         return None
-    if name in ('Path', 'PurePath', 'PurePosixPath', 'PosixPath') and node.args:
-        base = _anchored(node.args[0], origin, names)
+    if name in _PATH_TYPES and node.args:
+        if trust is not None and not trust.path_type(func):
+            return None
+        base = _anchored(node.args[0], origin, names, trust)
         if base is None:
             return None
         parts = [_literal_part(arg) for arg in node.args[1:]]
         return frozenset(_join(path, '/'.join(parts)) if parts else path for path in base)
     if isinstance(func, ast.Attribute):
-        base = _anchored(func.value, origin, names)
+        base = _anchored(func.value, origin, names, trust)
         if base is None:
             return None
         if func.attr in ('resolve', 'absolute'):
@@ -179,39 +348,50 @@ def _anchored(node: ast.AST, origin: str, names: dict[str, frozenset[str]]) -> f
             return frozenset(_join(path, '/'.join(parts)) for path in base)
     return None
 
-_MODULE_ENUMERATORS = {'os': ('listdir', 'scandir', 'walk', 'fwalk'), 'glob': ('glob', 'iglob')}
-_PATH_ENUMERATORS = ('glob', 'rglob', 'iterdir', 'walk')
-_BARE_ENUMERATORS = ('listdir', 'scandir', 'walk', 'fwalk', 'glob', 'iglob')
-
-def _check_enumeration(node: ast.Call, origin: str, names: dict[str, frozenset[str]]) -> None:
+def _check_enumerations(tree: ast.Module, origin: str, names: dict[str, frozenset[str]],
+                        bindings: _Bindings) -> None:
     """Directory listing can select unreviewed code; the job CWD is the repository root.
 
-    The one admitted shape is a glob, on a receiver not anchored at this file,
-    whose literal pattern ends in a concrete, wildcard-free, non-code suffix.
-    That shape cannot select code. Anchored enumeration stays rejected.
+    A listing is recognised by its name on any receiver, through import and
+    assignment aliases, and by string (`getattr`, `methodcaller`, subscripts).
+    A listing module (`os`, `glob`, `posix`, `nt`) may be used only as an
+    attribute receiver or in a literal `getattr` probe. The one admitted shape
+    is a glob on a receiver not anchored at this file whose literal pattern ends
+    in a concrete, wildcard-free, non-code suffix: it cannot select code.
+    Anchored enumeration stays rejected. Only the genuine `ast` module's
+    `walk` is exempt, because it walks syntax trees, not directories.
     """
-    func = node.func
-    if isinstance(func, ast.Name):
-        if func.id in _BARE_ENUMERATORS:
+    admitted = set()
+    for node in ast.walk(tree):
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                and node.func.attr in ('glob', 'rglob', 'iglob') and len(node.args) == 1
+                and not node.keywords and isinstance(node.args[0], ast.Constant)
+                and isinstance(node.args[0].value, str)):
+            suffix = posixpath.splitext(node.args[0].value)[1]
+            if (re.fullmatch(r'\.[A-Za-z0-9]+', suffix) is not None and suffix not in CODE_SUFFIXES
+                    and _anchored(node.func.value, origin, names) is None):
+                admitted.add(id(node.func))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            listing = (node.module or '').split('.', 1)[0] in _ENUMERATOR_MODULES and any(
+                alias.name == '*' or alias.name in _ENUMERATORS for alias in node.names)
+        elif isinstance(node, ast.Call):
+            listing = ((isinstance(node.func, ast.Name) and node.func.id in _ENUMERATORS)
+                       or (_call_name(node) in ('getattr', 'attrgetter', 'methodcaller') and any(
+                           isinstance(arg, ast.Constant) and arg.value in _ENUMERATORS for arg in node.args)))
+        elif isinstance(node, ast.Subscript):
+            listing = isinstance(node.slice, ast.Constant) and node.slice.value in _ENUMERATORS
+        elif isinstance(node, ast.Attribute):
+            listing = (node.attr in _ENUMERATORS and id(node) not in admitted
+                       and not (node.attr == 'walk' and bindings.genuine(node.value, 'ast')))
+        elif isinstance(node, ast.Name):
+            listing = id(node) in bindings.escapes and any(
+                kind == 'import' and module in _ENUMERATOR_MODULES
+                for _, kind, module in bindings.sites.get(node.id, ()))
+        else:
+            listing = False
+        if listing:
             raise ContractError('Publisher closure enumerates a repository directory')
-        return
-    if not isinstance(func, ast.Attribute):
-        return
-    receiver = func.value
-    if isinstance(receiver, ast.Name) and receiver.id in _MODULE_ENUMERATORS:
-        if func.attr not in _MODULE_ENUMERATORS[receiver.id]:
-            return
-        anchored = False
-    elif func.attr in _PATH_ENUMERATORS and not (isinstance(receiver, ast.Name) and receiver.id == 'ast'):
-        anchored = _anchored(receiver, origin, names) is not None
-    else:
-        return
-    pattern = node.args[0] if len(node.args) == 1 and not node.keywords else None
-    suffix = (posixpath.splitext(pattern.value)[1]
-              if isinstance(pattern, ast.Constant) and isinstance(pattern.value, str) else '')
-    if (anchored or func.attr not in ('glob', 'rglob', 'iglob')
-            or re.fullmatch(r'\.[A-Za-z0-9]+', suffix) is None or suffix in CODE_SUFFIXES):
-        raise ContractError('Publisher closure enumerates a repository directory')
 
 def _module_reference(module: str, origin: str) -> str | None:
     top = module.split('.', 1)[0]
@@ -250,13 +430,8 @@ def file_references(path: str, source: str) -> tuple[set[str], set[str]]:
     while cursor:
         cursor = posixpath.dirname(cursor)
         anchors.add(cursor)
-    enclosing: dict[ast.AST, ast.FunctionDef] = {}
-    def scope(node: ast.AST, function: ast.FunctionDef | None) -> None:
-        for child in ast.iter_child_nodes(node):
-            if function is not None:
-                enclosing[child] = function
-            scope(child, child if isinstance(child, ast.FunctionDef) else function)
-    scope(tree, None)
+    bindings = _Bindings(tree)
+    _check_enumerations(tree, path, names, bindings)
     definitions: dict[str, list[ast.FunctionDef]] = {}
     calls: dict[str, list[ast.Call]] = {}
     callee_ids = set()
@@ -270,18 +445,26 @@ def file_references(path: str, source: str) -> tuple[set[str], set[str]]:
                   and isinstance(node.ctx, ast.Load) and id(node) not in callee_ids}
 
     def resolved(target: ast.AST, seen: frozenset[tuple[str, str]]) -> bool:
-        """Anchored, or a parameter whose every same-module call site resolves."""
-        function = enclosing.get(target)
+        """Exactly anchored where it is evaluated, or a parameter whose every
+        same-module call site resolves. A discovery-union anchor from another
+        scope, or one any other binding overwrites, does not resolve a loader."""
+        scope = bindings.scope.get(target)
+        function = scope if isinstance(scope, ast.FunctionDef) else None
         positional = [arg.arg for arg in (function.args.posonlyargs + function.args.args)] if function else []
         keyword = [arg.arg for arg in function.args.kwonlyargs] if function else []
         if not (isinstance(target, ast.Name) and target.id in positional + keyword):
-            return _anchored(target, path, names) is not None
+            exact = _ExactAnchors(bindings, path, scope)
+            return _anchored(target, path, exact, bindings) is not None
         if (function.name, target.id) in seen:
             return True
         stores = [node for node in ast.walk(function) if isinstance(node, ast.Name)
                   and node.id == target.id and not isinstance(node.ctx, ast.Load)]
+        own = bindings.resolve(target.id, function)
+        helper = bindings.resolve(function.name, bindings.parent[function])
         sites = calls.get(function.name, [])
-        if (stores or len(definitions[function.name]) != 1 or function.name in value_uses
+        if (stores or not own or len(own) != 1 or own[0][1] != 'param'
+                or not helper or [node for _, _, node in helper] != [function]
+                or len(definitions[function.name]) != 1 or function.name in value_uses
                 or not sites):
             return False
         for call in sites:
@@ -319,7 +502,6 @@ def file_references(path: str, source: str) -> tuple[set[str], set[str]]:
                     if (ref := _module_reference(module, path)) is not None:
                         found.add(ref)
         if isinstance(node, ast.Call):
-            _check_enumeration(node, path, names)
             name = _call_name(node)
             if name in _MODULE_LOADERS:
                 target = node.args[0] if node.args else None
@@ -370,42 +552,145 @@ def _workflow_entry_job(workflow: str) -> tuple[str, str]:
         raise ContractError('Publisher workflow must invoke the entrypoint from exactly one job')
     return workflow[:marker.start()], invoking[0]
 
-def _is_scope_read(node: ast.AST) -> bool:
-    """`os.environ.get(VAR, default)` or `os.getenv(VAR, default)`, receiver verified."""
+_SELECTOR_ERROR = 'Publisher entrypoint must keep the reviewed default estate scope selector'
+_EXIT_CALLS = ('exit', '_exit', 'quit', 'abort')
+
+def _is_scope_read(node: ast.AST, bindings: _Bindings) -> bool:
+    """`os.environ.get(VAR, default)` or `os.getenv(VAR, default)` on the genuine `os` module."""
     if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
             and len(node.args) == 2 and not node.keywords
             and isinstance(node.args[0], ast.Constant)
             and node.args[0].value == ENTRYPOINT_SCOPE_VARIABLE):
         return False
     func = node.func
-    os_name = lambda value: isinstance(value, ast.Name) and value.id == 'os'
-    return ((func.attr == 'getenv' and os_name(func.value))
+    return ((func.attr == 'getenv' and bindings.genuine(func.value, 'os'))
             or (func.attr == 'get' and isinstance(func.value, ast.Attribute)
-                and func.value.attr == 'environ' and os_name(func.value.value)))
+                and func.value.attr == 'environ' and bindings.genuine(func.value.value, 'os')))
+
+def _uses(node: ast.AST, name: str) -> bool:
+    return any(isinstance(item, ast.Name) and item.id == name for item in ast.walk(node))
+
+def _may_exit(node: ast.AST) -> bool:
+    """A return, raise, assert or process exit that runs without entering a nested function body."""
+    stack = [node]
+    while stack:
+        item = stack.pop()
+        if isinstance(item, (ast.Return, ast.Raise, ast.Assert)) or (
+                isinstance(item, ast.Call) and _call_name(item) in _EXIT_CALLS):
+            return True
+        if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            stack.extend((*item.decorator_list, item.args))
+        elif isinstance(item, ast.Lambda):
+            stack.append(item.args)
+        else:
+            stack.extend(ast.iter_child_nodes(item))
+    return False
+
+def _scope_members(node: ast.AST, bindings: _Bindings, scope: ast.AST | None,
+                   seen: frozenset[str] = frozenset()) -> frozenset[str]:
+    """Strings of a literal scope set; a named set must be one literal module constant."""
+    if isinstance(node, ast.Name):
+        sites = bindings.resolve(node.id, scope)
+        if (node.id in seen or not sites or len(sites) != 1
+                or sites[0][0] is not None or sites[0][1] != 'assign'):
+            raise ContractError(_SELECTOR_ERROR)
+        node, scope, seen = sites[0][2].value, None, seen | {node.id}
+    if not isinstance(node, (ast.Tuple, ast.List, ast.Set)):
+        raise ContractError(_SELECTOR_ERROR)
+    members: set[str] = set()
+    for item in node.elts:
+        if isinstance(item, ast.Constant) and isinstance(item.value, str):
+            members.add(item.value)
+        elif isinstance(item, ast.Starred):
+            members |= _scope_members(item.value, bindings, scope, seen)
+        else:
+            raise ContractError(_SELECTOR_ERROR)
+    return frozenset(members)
+
+def _takes(test: ast.AST, name: str, value: str, bindings: _Bindings, scope: ast.AST) -> bool:
+    """Whether `if <test>` is taken for this scope value; anything unevaluable fails closed."""
+    if not (isinstance(test, ast.Compare) and isinstance(test.left, ast.Name)
+            and test.left.id == name and len(test.ops) == 1):
+        raise ContractError(_SELECTOR_ERROR)
+    op, right = test.ops[0], test.comparators[0]
+    if isinstance(op, (ast.Eq, ast.NotEq)) and isinstance(right, ast.Constant) and isinstance(right.value, str):
+        return (value == right.value) == isinstance(op, ast.Eq)
+    if isinstance(op, (ast.In, ast.NotIn)):
+        return (value in _scope_members(right, bindings, scope)) == isinstance(op, ast.In)
+    raise ContractError(_SELECTOR_ERROR)
+
+def _route(statements: list[ast.stmt], name: str, value: str, bindings: _Bindings,
+           scope: ast.AST) -> tuple[ast.stmt, ast.If | None] | None:
+    """Partially evaluate the dispatch for one scope value.
+
+    Returns the statement through which the value leaves, with the innermost
+    taken `if` whose body holds it, or None when it falls through. A scope use
+    other than an evaluable `if` test (a loop, `try`, nested function or call
+    argument) fails closed.
+    """
+    for statement in statements:
+        if isinstance(statement, ast.If) and _uses(statement.test, name):
+            taken = _takes(statement.test, name, value, bindings, scope)
+            result = _route(statement.body if taken else statement.orelse, name, value, bindings, scope)
+            if result is not None:
+                leaving, branch = result
+                return leaving, branch if branch is not None else statement if taken else None
+        elif _uses(statement, name):
+            raise ContractError(_SELECTOR_ERROR)
+        elif _may_exit(statement):
+            return statement, None
+    return None
+
+def _runs_as_entrypoint(tree: ast.Module, function: ast.FunctionDef, bindings: _Bindings) -> bool:
+    """`if __name__ == "__main__":` runs the selector's function, and nothing exits first."""
+    guards = [node for node in tree.body if isinstance(node, ast.If)
+              and isinstance(node.test, ast.Compare) and isinstance(node.test.left, ast.Name)
+              and node.test.left.id == '__name__' and len(node.test.ops) == 1
+              and isinstance(node.test.ops[0], ast.Eq)
+              and isinstance(node.test.comparators[0], ast.Constant)
+              and node.test.comparators[0].value == '__main__']
+    own = bindings.resolve(function.name, None)
+    if (len(guards) != 1 or guards[0].orelse or len(guards[0].body) != 1 or '__name__' in bindings.sites
+            or function not in tree.body or not own or [node for _, _, node in own] != [function]
+            or any(_may_exit(node) for node in tree.body[:tree.body.index(guards[0])])):
+        return False
+    statement = guards[0].body[0]
+    call = (statement.value if isinstance(statement, ast.Expr)
+            else statement.exc if isinstance(statement, ast.Raise) else None)
+    if (isinstance(call, ast.Call) and _call_name(call) in ('SystemExit', 'exit')
+            and len(call.args) == 1 and not call.keywords):
+        call = call.args[0]
+    return (isinstance(call, ast.Call) and isinstance(call.func, ast.Name)
+            and call.func.id == function.name and not call.args and not call.keywords)
 
 def entrypoint_default_scope(entrypoint: str) -> str:
     """The literal default of the entrypoint's one scope selector that drives dispatch.
 
-    Reviewed shape: inside one function, `scope = os.environ.get(VAR, "estate")`
-    is the only assignment to that name, and `if scope == "lyte": return ...`
-    selects the Lyte-only route; every other path falls through to estate.
+    Reviewed shape: a module-level function that `if __name__ == "__main__":`
+    runs reads `scope = os.environ.get(VAR, "estate")` (genuine `os`) as the
+    only binding of that name. Evaluating its dispatch for each admitted value,
+    `estate` falls through every scope test to the estate route and `lyte`
+    leaves through the return of `if scope == "lyte":`. No exit precedes the
+    selector, and an unreachable or captured branch fails closed.
     """
     try:
         tree = ast.parse(entrypoint)
     except (SyntaxError, ValueError):
         raise ContractError('Publisher entrypoint is not parseable Python') from None
+    bindings = _Bindings(tree)
     mentions = [node for node in ast.walk(tree)
                 if isinstance(node, ast.Constant) and node.value == ENTRYPOINT_SCOPE_VARIABLE]
     selectors = [(function, node) for function in ast.walk(tree) if isinstance(function, ast.FunctionDef)
                  for node in function.body if isinstance(node, ast.Assign)
                  and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name)
-                 and _is_scope_read(node.value)]
+                 and _is_scope_read(node.value, bindings)]
     if len(mentions) != 1 or len(selectors) != 1:
-        raise ContractError('Publisher entrypoint must keep the reviewed default estate scope selector')
+        raise ContractError(_SELECTOR_ERROR)
     function, assignment = selectors[0]
     name, default = assignment.targets[0].id, assignment.value.args[1]
     stores = [node for node in ast.walk(function) if isinstance(node, ast.Name)
               and node.id == name and not isinstance(node.ctx, ast.Load)]
+    own = bindings.resolve(name, function)
     dispatch = [node for node in ast.walk(function) if isinstance(node, ast.If)
                 and isinstance(node.test, ast.Compare) and isinstance(node.test.left, ast.Name)
                 and node.test.left.id == name and len(node.test.ops) == 1
@@ -413,9 +698,21 @@ def entrypoint_default_scope(entrypoint: str) -> str:
                 and isinstance(node.test.comparators[0], ast.Constant)
                 and node.test.comparators[0].value == 'lyte'
                 and node.body and isinstance(node.body[0], ast.Return)]
-    if (len(stores) != 1 or len(dispatch) != 1 or not isinstance(default, ast.Constant)
-            or default.value != ADMITTED_DEFAULT_SCOPE):
-        raise ContractError('Publisher entrypoint must keep the reviewed default estate scope selector')
+    if (len(stores) != 1 or not own or [node for _, _, node in own] != [assignment]
+            or len(dispatch) != 1 or not isinstance(default, ast.Constant)
+            or default.value != ADMITTED_DEFAULT_SCOPE
+            or not _runs_as_entrypoint(tree, function, bindings)):
+        raise ContractError(_SELECTOR_ERROR)
+    index = function.body.index(assignment)
+    last = max(position for position, node in enumerate(function.body) if _uses(node, name))
+    prefix, region = function.body[:index], function.body[index + 1:last + 1]
+    if any(_may_exit(node) or _uses(node, name) for node in prefix):
+        raise ContractError(_SELECTOR_ERROR)
+    if _route(region, name, ADMITTED_DEFAULT_SCOPE, bindings, function) is not None:
+        raise ContractError(_SELECTOR_ERROR)
+    lyte = _route(region, name, 'lyte', bindings, function)
+    if lyte is None or not isinstance(lyte[0], ast.Return) or lyte[1] is not dispatch[0]:
+        raise ContractError(_SELECTOR_ERROR)
     return default.value
 
 def workflow_entrypoint_scopes(workflow: str, default: str) -> list[str]:
