@@ -23,41 +23,42 @@ SOURCE_REQUIRED_CHECKS = (
     'source-binding',
 )
 # Reviewed immutable szl-holdings/a11oy blobs. The complete closure was reviewed
-# at REVIEWED_PUBLISHER_COMMIT. Every Python blob below is byte-identical at the
-# earlier a2a9292346fa02d4c239564b6773f704204ea541 review; only the workflow
-# changed (third-party action pin bumps). The Lyte publisher pins controller
-# .github@163a61fd9759e5ecc3c2daf13e528f7b281ff81d; the combined vertical-services
-# writer separately pins .github@c889276e51e7d954c4bba8b216f86fc7577721fa.
+# at REVIEWED_PUBLISHER_COMMIT, including the native presentation and Sentra
+# observation-budget helpers loaded by the generated-flagship route. The Lyte
+# publisher, its 17 source gates and both pinned controllers are unchanged.
 # Admission scope and reviewed identities: docs/lyte-publisher-admission.md.
 # A new publisher, entrypoint, route or closure file requires a separate review.
-REVIEWED_PUBLISHER_COMMIT = 'e6cf9d06c92827225054550533e1a091b59f1031'
+REVIEWED_PUBLISHER_COMMIT = '58a0e102e8ebc0b35af86be3ec2de3b6c4e41d66'
 PUBLISHER_PATH = 'scripts/hf_publish_lyte_enterprise.py'
 ENTRYPOINT_PATH = 'scripts/hf_publish_vertical_flagships_v4.py'
 WORKFLOW_PATH = '.github/workflows/hf-sync.yml'
 DYNAMIC_PUBLISHER_BLOB = '7c533d753a2b913a77bb71074f04aa5b753b0392'
-DYNAMIC_ENTRYPOINT_BLOB = '508293e2631f0f7b952cfe06eb4836fdd81cffa4'
+DYNAMIC_ENTRYPOINT_BLOB = '199cd4d30e86c6b0e01aeb7818803bb7d68d6a70'
 # The workflow runs the entrypoint without SZL_FLAGSHIP_SCOPE, so its default
 # estate route executes in ONE process: the generated-flagship publisher, then
 # the Lyte publisher, then the combined vertical-services publisher. Bind that
 # whole route, plus the workflow job's own source, plan and completion gates.
 DYNAMIC_DEPENDENCY_BLOBS = {
-    WORKFLOW_PATH: '516f8334617cf4967465372db2ab61a50b49349b',
+    WORKFLOW_PATH: 'a955e43f7878b050a849d597b245581c396fac9f',
     'scripts/szl_release_guard.py': 'f6c7bc02df02076388be5fa0b6949d8929cc2ba2',
     'scripts/lyte_enterprise_live_contract.py': '494116f65b24ea5b8a516abde31668be2248cbf4',
-    'scripts/hf_existing_space_guard.py': '364e0bba7dc4e0abb7730f210263b3fd4387d144',
+    'scripts/hf_existing_space_guard.py': 'ebab5d507ba589bb64d01a45bf32a03c2b52cb45',
     'scripts/hf_exact_main_ownership.py': '6e95133ac74f0d05d5372ed68022a691ceaa15c2',
     'scripts/estate_repair_dispatch.py': '81f0e83729390ee66b633a8d45e5f1139374ba41',
     'scripts/estate_child_completion.py': '5e59e91824d58da9bcc650c623c3bdfaf6f0040b',
     # Generated-flagship route (Terra, Sentra, Counsel, Finance shells).
-    'scripts/hf_publish_vertical_flagships_v4_impl.py': '6337abaa2151b2a71998fd19aaf39fa2ef88bf2b',
+    'scripts/hf_publish_vertical_flagships_v4_impl.py': '421188ba9e1dcce78bf2503e4b10ead3e126bded',
     'scripts/_hf_publish_vertical_flagships_v4_impl_base.py': '419931621a3d7de4da233840762761c4207007f5',
-    'scripts/hf_finance_read_proxy.py': '841fee9442d6955925f3214b5ff8fd27eeede903',
+    'scripts/hf_finance_read_proxy.py': '56ec9cd7df6eef37e59395ce35e010637487211c',
     'scripts/hf_flagship_runtime_contract.py': '1b3571a8b49c31f12307bf44e77c303d2b86fb32',
-    'scripts/hf_finance_workspace.py': 'b3ec64fec7e60f5a98bf61550f72dbf441c3d635',
+    'scripts/hf_finance_workspace.py': '6bf54deb552bdf94578cef45f84ead8a2318c3aa',
     'scripts/hf_finance_research_workspace.py': '18ba3c0a1feb776e7f12f46c5b69b6069b597180',
     'scripts/hf_finance_signed_workspace.py': 'febc20a7dc1391d35397bb81e38222135eb3d100',
-    'scripts/hf_finance_functional_gate.py': '9c5b7cf066f612b0b7a6687fe3bdafc2414d07c0',
+    'scripts/hf_finance_functional_gate.py': '7d1d1bb9a7d44add13e7f06d8ed5904d8fddb21b',
     'scripts/hf_finance_projection_manifest.py': '4d00c2d0b1005c4f23f37c810754bdeb7eff4453',
+    # Source-owned presentation and bounded Sentra observation code.
+    'scripts/hf_vertical_native_presentation.py': 'a4a1b1dc0598b08438770e8771709521b28cddbb',
+    'scripts/hf_sentra_upstream.py': '11e799ca6c8feb270888209188088a7f86c44fe3',
     # Combined vertical-services route, run after Lyte in the same process.
     'scripts/hf_publish_vertical_services_intelligence_v4.py': 'c4191e7f6139ad934fe9c8809174476934b2eb59',
     'scripts/hf_publish_vertical_services_frontier_v3.py': '69b19505d307f22faeee49a98d11c97a58abd603',
