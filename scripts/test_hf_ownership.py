@@ -119,6 +119,8 @@ EXPECTED_DEPENDENCIES = (
     'scripts/hf_finance_signed_workspace.py',
     'scripts/hf_finance_functional_gate.py',
     'scripts/hf_finance_projection_manifest.py',
+    'scripts/hf_vertical_native_presentation.py',
+    'scripts/hf_sentra_upstream.py',
     'scripts/hf_publish_vertical_services_intelligence_v4.py',
     'scripts/hf_publish_vertical_services_frontier_v3.py',
     'scripts/hf_publish_vertical_services.py',
@@ -148,7 +150,8 @@ def synthetic_sources():
         + ''.join(f'_spec = importlib.util.spec_from_file_location("m", {sibling(name)})\n'
                   for name in ('hf_finance_read_proxy.py', 'hf_flagship_runtime_contract.py',
                                'hf_finance_workspace.py', 'hf_finance_functional_gate.py',
-                               'hf_finance_projection_manifest.py')))
+                               'hf_finance_projection_manifest.py',
+                               'hf_vertical_native_presentation.py', 'hf_sentra_upstream.py')))
     sources['scripts/_hf_publish_vertical_flagships_v4_impl_base.py'] = (
         'from pathlib import Path\nfrom huggingface_hub import HfApi\n'
         'ROOT = Path(__file__).resolve().parents[1]\n'
