@@ -21,3 +21,28 @@ jobs:
         run: npm test
       - name: Build (vite, development mode — no database dependency)
         run: npm run build:dev
+
+  python:
+    name: Python organs (stdlib, offline)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        shell: bash # -eo pipefail: a failed git ls-files cannot pass as zero files
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Compile every tracked Python file
+        run: |
+          test "$(git ls-files -- '*.py' | wc -l)" -gt 0
+          git ls-files -z -- '*.py' | xargs -0 python -I -m py_compile
+      - name: List organs with the command src/routes/api/act.ts spawns
+        working-directory: python
+        run: python -m lyte_lattice list
+      # `selftest` is not a gate: it exits 1 by design because N27 Train is blocked.
+      - name: CLI contract (one JSON value, fail closed, unsigned, no fabricated joule)
+        run: python -I tests/test_lyte_cli_contract.py
