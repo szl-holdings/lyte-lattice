@@ -111,12 +111,14 @@ test("a staged file on another filesystem is refused, not copied", () => {
   const target = join(root, "public/og.jpg");
   writeFileSync(staged, "new card");
   writeFileSync(target, "old card");
+  const cause = Object.assign(new Error("EXDEV"), { code: "EXDEV" });
   const crossDevice = () => {
-    throw Object.assign(new Error("EXDEV"), { code: "EXDEV" });
+    throw cause;
   };
 
   assert.throws(() => handOver(staged, target, { rename: crossDevice }), {
     message: /stage under \/workspace\/\.grok\//,
+    cause,
   });
   // Copying would have had to stage its own temp inside public/, which is the
   // one place stagingError refuses.

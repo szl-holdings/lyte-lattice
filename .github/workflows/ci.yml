@@ -40,6 +40,10 @@ jobs:
         run: |
           test "$(git ls-files -- '*.py' | wc -l)" -gt 0
           git ls-files -z -- '*.py' | xargs -0 python -I -m py_compile
+      - name: Shared scripts/ template matches the a11oy-factory lock
+        run: |
+          python3 -I .github/scripts/check_template_drift.py
+          python3 -I -m unittest discover -s .github/scripts -p "test_check_template_drift.py" -v
       - name: List organs with the command src/routes/api/act.ts spawns
         working-directory: python
         run: python -m lyte_lattice list
