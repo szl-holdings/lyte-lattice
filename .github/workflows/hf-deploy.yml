@@ -71,9 +71,9 @@ jobs:
           python -I -m pip install --disable-pip-version-check --only-binary=:all:
           -r source/scripts/hf-ownership-requirements.txt
       - name: Reject wrong targets, invalid metadata and local writers offline
-        run: |
-          python -I source/scripts/test_hf_ownership.py
-          python -I source/scripts/test_hf_failure_evidence.py
+        run: python -I source/scripts/test_hf_ownership.py
+      - name: Verify blocked ownership evidence offline
+        run: python -I source/scripts/test_hf_failure_evidence.py
       - name: Verify actual ownership and record the exact inspected commits
         run: >-
           python -I source/scripts/verify-hf-ownership.py
