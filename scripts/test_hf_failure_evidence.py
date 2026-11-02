@@ -13,7 +13,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from unittest import mock
+import unittest.mock as mock
 
 SCRIPT = Path(__file__).with_name('verify-hf-ownership.py')
 spec = importlib.util.spec_from_file_location('lyte_ownership_failure_test', SCRIPT)
