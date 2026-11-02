@@ -73,6 +73,36 @@ class OwnershipContract(unittest.TestCase):
     def test_duplicate_authority_policy_is_required(self):
         self.alignment['hub_alias_policy']['duplicate_authority_spaces_forbidden'] = False
         with self.assertRaises(owner.ContractError): self.run_contract()
+    def test_alignment_requires_an_object_with_public_body_objects(self):
+        valid = copy.deepcopy(self.alignment)
+        for alignment in (None, [], 'szl.estate.alignment/v1', True):
+            with self.subTest(alignment=alignment), self.assertRaises(owner.ContractError):
+                self.alignment = alignment
+                self.run_contract()
+        for bodies in (None, 'lyte', {'lyte': valid['public_bodies'][0]},
+                       [valid['public_bodies'][0], None], [valid['public_bodies'][0], 'terra']):
+            with self.subTest(bodies=bodies), self.assertRaises(owner.ContractError):
+                self.alignment = copy.deepcopy(valid)
+                self.alignment['public_bodies'] = bodies
+                self.run_contract()
+    def test_alias_policy_requires_an_object(self):
+        for policy in (None, [], 'lyte', True):
+            with self.subTest(policy=policy), self.assertRaises(owner.ContractError):
+                self.alignment['hub_alias_policy'] = policy
+                self.run_contract()
+    def test_canonical_slug_membership_requires_a_list_of_strings(self):
+        for slugs in ('lyte', 'not-lyte', {'lyte': False}, None, True,
+                      ['lyte', None], ['lyte', 1], ['lyte', '']):
+            with self.subTest(slugs=slugs), self.assertRaises(owner.ContractError):
+                self.alignment['hub_alias_policy']['canonical_public_space_slugs'] = slugs
+                self.run_contract()
+    def test_authority_json_rejects_duplicate_keys_and_malformed_json(self):
+        for text in ('{"schema":"wrong","schema":"szl.estate.alignment/v1"}',
+                     '{"hub_alias_policy":{"canonical_public_space_slugs":"not-lyte",'
+                     '"canonical_public_space_slugs":["lyte"]}}', '{broken'):
+            with self.subTest(text=text), self.assertRaises(owner.ContractError):
+                owner.parse_alignment(text)
+        self.assertEqual(owner.parse_alignment(json.dumps(self.alignment)), self.alignment)
     def test_noncanonical_origin_rejected(self):
         self.publisher = self.publisher.replace('szlholdings-lyte.hf.space', 'example.invalid')
         with self.assertRaises(owner.ContractError): self.run_contract()
@@ -96,6 +126,47 @@ class OwnershipContract(unittest.TestCase):
         for text in ('', 'permissions: write-all', 'permissions:\n  contents: write\n'):
             with self.subTest(text=text), self.assertRaises(owner.ContractError):
                 owner.validate_caller(text)
+    def test_caller_rejects_job_write_permissions_in_all_yaml_forms(self):
+        for permissions in ('write-all', '"write-all"', '{contents: write}',
+                            '{"contents": "write"}', '\n      contents: write # writer',
+                            '{contents: "\\x77rite"}', '{contents: null}',
+                            "{contents: '${{ inputs.permission }}'}"):
+            text = self.caller + 'jobs:\n  verify:\n    permissions: ' + permissions + '\n'
+            with self.subTest(permissions=permissions), self.assertRaises(owner.ContractError):
+                owner.validate_caller(text)
+    def test_caller_reads_yaml_before_checking_secret_contexts(self):
+        values = ("${{ secrets['HF_TOKEN'] }}", '${{ secrets.HF_TOKEN }}',
+                  '${{ toJSON(secrets) }}', "${{ SeCrEtS['HF_TOKEN'] }}",
+                  "${{ format('}}', secrets.HF_TOKEN) }}", '${{\n secrets.HF_TOKEN\n }}')
+        for value in values:
+            text = self.caller + 'jobs:\n  verify:\n    env:\n      TOKEN: ' + json.dumps(value) + '\n'
+            with self.subTest(value=value), self.assertRaises(owner.ContractError):
+                owner.validate_caller(text)
+        escaped = self.caller + 'jobs:\n  verify:\n    env:\n      TOKEN: "${{ s\\u0065crets.HF_TOKEN }}"\n'
+        with self.assertRaises(owner.ContractError): owner.validate_caller(escaped)
+        with self.assertRaises(owner.ContractError):
+            owner.validate_caller(self.caller + 'jobs:\n  verify:\n    secrets: inherit\n')
+        for key in ('HF_TOKEN', 'HUGGING_FACE_HUB_TOKEN', 'HUGGINGFACEHUB_API_TOKEN'):
+            with self.subTest(key=key), self.assertRaises(owner.ContractError):
+                owner.validate_caller(self.caller + 'env: {' + key + ': token}\n')
+    def test_caller_rejects_ambiguous_yaml_before_admission(self):
+        additions = ('permissions: {contents: read}\n',
+                     '"permi\\u0073sions": {contents: read}\n',
+                     'jobs:\n  verify:\n    permissions: {contents: write, contents: read}\n',
+                     'defaults: &read {contents: read}\njobs:\n  verify:\n    permissions: *read\n',
+                     'jobs:\n  verify:\n    permissions: {<<: {contents: write}, contents: read}\n',
+                     'other: &cycle [*cycle]\n', 'other: !!python/object/apply:os.system [echo BAD]\n',
+                     'jobs: [broken\n', 'jobs: []\n', 'jobs: {verify: null}\n')
+        for addition in additions:
+            with self.subTest(addition=addition), self.assertRaises(owner.ContractError):
+                owner.validate_caller(self.caller + addition)
+    def test_caller_accepts_unambiguous_read_only_yaml(self):
+        for text in ('permissions: {contents: read}\n',
+                     '"permissions": {"contents": "read"}\n',
+                     self.caller + 'jobs:\n  verify:\n    permissions: {contents: read, actions: none}\n',
+                     self.caller + 'jobs:\n  verify:\n    permissions: read-all\n',
+                     self.caller + 'jobs:\n  verify:\n    permissions: {}\n'):
+            with self.subTest(text=text): owner.validate_caller(text)
 
 # Independent inventory of the reviewed a11oy estate-route execution closure.
 # Literal on purpose: it is never derived from the production registry it checks.
@@ -864,6 +935,32 @@ class DynamicOwnershipContract(OwnershipContract):
                          {EXPECTED_PUBLISHER, EXPECTED_ENTRYPOINT, *EXPECTED_DEPENDENCIES})
         self.assertEqual(closure['unbound_data_references'], ['deployments/fixture/index.html'])
         self.assertEqual(set(receipt['publisher_dependency_blobs']), set(EXPECTED_DEPENDENCIES))
+    def test_cli_never_emits_a_receipt_for_malformed_canonical_slug_lists(self):
+        for slugs in ('not-lyte', {'lyte': False}, ['lyte', None]):
+            self.alignment['hub_alias_policy']['canonical_public_space_slugs'] = slugs
+            with self.subTest(slugs=slugs), self.cli(self.cli_inputs()) as mocks, \
+                    self.assertRaisesRegex(owner.ContractError, 'Canonical Space'):
+                owner.main()
+            for name in ('checkout', 'tip', 'mkdir', 'receipt'):
+                mocks[name].assert_not_called()
+    def test_cli_never_emits_a_receipt_for_write_or_secret_callers(self):
+        base = self.caller
+        for extra in ('jobs:\n  verify:\n    permissions: write-all\n',
+                      'jobs:\n  verify:\n    permissions: {contents: write}\n',
+                      "env: {TOKEN: \"${{ secrets['HF_TOKEN'] }}\"}\n"):
+            self.caller = base + extra
+            with self.subTest(extra=extra), self.cli(self.cli_inputs()) as mocks, \
+                    self.assertRaises(owner.ContractError):
+                owner.main()
+            for name in ('checkout', 'tip', 'mkdir', 'receipt'):
+                mocks[name].assert_not_called()
+    def test_cli_rejects_duplicate_authority_keys_before_evidence(self):
+        inputs = self.cli_inputs()
+        key = 'governance/estate/alignment.v1.json'
+        inputs[key] = inputs[key].replace('"schema":', '"schema": "wrong", "schema":', 1)
+        with self.cli(inputs) as mocks, self.assertRaisesRegex(owner.ContractError, 'Duplicate estate'):
+            owner.main()
+        self.assert_nothing_after_rejection(mocks)
     def test_cli_rejects_unreviewed_bytes_before_evidence_or_receipt(self):
         original_publisher, original_entry = self.publisher, self.entry
         for changed in ('publisher', 'entrypoint', 'static-pin', 'line-endings'):

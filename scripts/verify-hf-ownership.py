@@ -13,6 +13,7 @@ import sys
 import urllib.request
 from pathlib import Path
 from typing import Any
+import yaml
 
 SHA40 = re.compile(r'^[0-9a-f]{40}$')
 SOURCE_REQUIRED_CHECKS = (
@@ -896,18 +897,94 @@ def validate_card(text: str) -> None:
     if not value or len(value) > 60:
         raise ContractError('Description must contain 1..60 characters')
 
+class _CallerLoader(yaml.BaseLoader):
+    """Only YAML mappings, lists and decoded strings; never object constructors.
+
+    BaseLoader also keeps GitHub's `on` key as a string rather than YAML 1.1's
+    boolean. Reject ambiguous inputs instead of selecting one interpretation.
+    """
+    def compose_node(self, parent, index):
+        event = self.peek_event()
+        if isinstance(event, yaml.AliasEvent) or getattr(event, 'anchor', None) is not None:
+            raise ContractError('Caller YAML anchors and aliases are not admitted')
+        if getattr(event, 'tag', None) is not None:
+            raise ContractError('Caller YAML explicit tags are not admitted')
+        return super().compose_node(parent, index)
+
+    def construct_mapping(self, node, deep=False):
+        result = {}
+        for key_node, value_node in node.value:
+            if not isinstance(key_node, yaml.ScalarNode):
+                raise ContractError('Caller YAML mapping keys must be strings')
+            key = self.construct_object(key_node, deep=deep)
+            if key == '<<' or key in result:
+                raise ContractError('Caller YAML merge or duplicate key is not admitted')
+            result[key] = self.construct_object(value_node, deep=deep)
+        return result
+
 def validate_caller(text: str) -> None:
-    if not re.search(r'(?m)^permissions:\s*\n  contents: read\s*$', text):
-        raise ContractError('Caller must explicitly have read-only contents permission')
-    forbidden = (
-        r'\$\{\{\s*secrets\.',
-        r'(?m)^\s+[\w-]+:\s*write\s*$',
-        r'(?m)^\s+HF_[A-Z_]+:',
-        r'reusable-hf-deploy\.yml@',
-        r'\b(?:upload_folder|upload_file|create_repo|restart_space|pause_space)\s*\(',
-    )
-    if any(re.search(pattern, text) for pattern in forbidden):
-        raise ContractError('Presentation caller must not own a provider credential or write lane')
+    try:
+        caller = yaml.load(text, Loader=_CallerLoader)
+    except (yaml.YAMLError, RecursionError) as exc:
+        raise ContractError('Caller must contain unambiguous YAML') from exc
+    if not isinstance(caller, dict):
+        raise ContractError('Caller must be a workflow object')
+
+    def read_only(permissions, *, workflow=False):
+        if not workflow and permissions == 'read-all':
+            return
+        if (not isinstance(permissions, dict)
+                or any(value not in ('read', 'none') for value in permissions.values())
+                or (workflow and permissions.get('contents') != 'read')):
+            raise ContractError('Caller must explicitly have read-only contents permission')
+
+    read_only(caller.get('permissions'), workflow=True)
+    jobs = caller.get('jobs', {})
+    if not isinstance(jobs, dict) or any(not isinstance(job, dict) for job in jobs.values()):
+        raise ContractError('Caller jobs must be workflow job objects')
+    for job in jobs.values():
+        if 'permissions' in job:
+            read_only(job['permissions'])
+
+    def inspect(value):
+        if isinstance(value, dict):
+            for key, item in value.items():
+                if key == 'permissions':
+                    read_only(item)
+                if (key == 'secrets' or key.startswith('HF_')
+                        or key in ('HUGGING_FACE_HUB_TOKEN', 'HUGGINGFACEHUB_API_TOKEN')):
+                    raise ContractError('Presentation caller must not own a provider credential or write lane')
+                inspect(key)
+                inspect(item)
+        elif isinstance(value, list):
+            for item in value:
+                inspect(item)
+        elif isinstance(value, str):
+            # Inspect the whole decoded scalar, not a regex-delimited expression:
+            # a quoted '}}' inside format() must not hide a later secret context.
+            secret_context = '${{' in value and re.search(r'\bsecrets\b', value, re.IGNORECASE)
+            provider_writer = re.search(
+                r'reusable-hf-deploy\.yml@|\b(?:upload_folder|upload_file|create_repo|restart_space|pause_space)\s*\(', value)
+            if secret_context or provider_writer:
+                raise ContractError('Presentation caller must not own a provider credential or write lane')
+
+    try:
+        inspect(caller)
+    except RecursionError as exc:
+        raise ContractError('Caller nesting exceeds the admission bound') from exc
+
+def parse_alignment(text: str) -> dict:
+    def unique_object(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ContractError('Duplicate estate authority JSON key')
+            result[key] = value
+        return result
+    try:
+        return json.loads(text, object_pairs_hook=unique_object)
+    except json.JSONDecodeError as exc:
+        raise ContractError('Estate authority manifest must be valid JSON') from exc
 
 def validate(alignment: dict, publisher: str, entrypoint: str, workflow: str,
              caller: str, readme: str, *, source_head: dict | None = None,
@@ -915,16 +992,25 @@ def validate(alignment: dict, publisher: str, entrypoint: str, workflow: str,
              publisher_dependencies: dict[str, str] | None = None) -> dict:
     validate_card(readme)
     validate_caller(caller)
-    if alignment.get('schema') != 'szl.estate.alignment/v1':
+    if not isinstance(alignment, dict) or alignment.get('schema') != 'szl.estate.alignment/v1':
         raise ContractError('Unrecognized estate authority schema')
-    rows = [row for row in alignment.get('public_bodies', []) if row.get('id') == 'lyte']
+    bodies = alignment.get('public_bodies')
+    if not isinstance(bodies, list) or any(not isinstance(row, dict) for row in bodies):
+        raise ContractError('Estate public_bodies must be a list of objects')
+    rows = [row for row in bodies if row.get('id') == 'lyte']
     if len(rows) != 1:
         raise ContractError('Lyte must have exactly one public body')
     expected = {'backend_source': 'szl-holdings/lyte-services', 'presentation_source': 'szl-holdings/lyte-lattice', 'hub_surface': 'SZLHOLDINGS/lyte'}
     if any(rows[0].get(key) != value for key, value in expected.items()):
         raise ContractError('Lyte runtime, presentation, or Hub authority changed')
-    policy = alignment.get('hub_alias_policy', {})
-    if policy.get('duplicate_authority_spaces_forbidden') is not True or 'lyte' not in policy.get('canonical_public_space_slugs', []):
+    policy = alignment.get('hub_alias_policy')
+    if not isinstance(policy, dict):
+        raise ContractError('Canonical Space / duplicate-authority policy missing')
+    slugs = policy.get('canonical_public_space_slugs')
+    if (not isinstance(slugs, list)
+            or any(not isinstance(slug, str) or not slug for slug in slugs)
+            or policy.get('duplicate_authority_spaces_forbidden') is not True
+            or 'lyte' not in slugs):
         raise ContractError('Canonical Space / duplicate-authority policy missing')
     owner = constants(publisher)
     entry = constants(entrypoint)
@@ -990,6 +1076,7 @@ def main() -> int:
              'caller': args.source / '.github/workflows/hf-deploy.yml',
              'readme': args.source / 'README.md'}
     content = {key: path.read_bytes().decode('utf-8') for key, path in paths.items()}
+    alignment = parse_alignment(content['alignment'])
     # Every production CLI invocation admits the entire reviewed closure first,
     # reading every registered file from the publisher checkout and deriving the
     # workflow-selected route. A legacy static SOURCE_REVISION cannot bypass it.
@@ -1000,7 +1087,7 @@ def main() -> int:
     source = {'publisher_dependencies': dependencies}
     if 'SOURCE_REVISION' not in constants(content['publisher']):
         source['source_head'], source['source_checks'] = read_source_evidence()
-    result = validate(json.loads(content['alignment']), content['publisher'], content['entrypoint'], content['workflow'], content['caller'], content['readme'], **source)
+    result = validate(alignment, content['publisher'], content['entrypoint'], content['workflow'], content['caller'], content['readme'], **source)
     result['checkout_revisions'] = {'presentation': revision(args.source), 'governance': revision(args.governance), 'publisher': revision(args.publisher)}
     result['input_sha256'] = {key: hashlib.sha256(value.encode()).hexdigest() for key, value in content.items()}
     result['publisher_dependency_blobs'] = dict(DYNAMIC_DEPENDENCY_BLOBS)

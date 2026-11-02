@@ -135,6 +135,23 @@ against their blobs before execution.
 
 ## How the verifier binds the route
 
+The verifier's offline tests require the pinned YAML parser in
+`scripts/hf-ownership-requirements.txt`. Install it with
+`python -I -m pip install -r scripts/hf-ownership-requirements.txt`, then run
+`python -I scripts/test_hf_ownership.py`. The read-only workflow installs the
+same requirement before its tests and ownership check.
+
+Caller permissions and credential references are inspected after YAML parsing.
+Workflow permissions must explicitly grant `contents: read`; job overrides may
+only reduce permissions or retain read access. Duplicate keys, merge keys,
+anchors, aliases and explicit tags are rejected. Secret contexts are checked in
+decoded scalar values, including bracket indexing and YAML escapes. These checks
+validate the declared caller contract; they do not execute or prove arbitrary
+action and shell code safe. Authority JSON with duplicate keys is rejected.
+Authority manifests must contain object-shaped
+public bodies and policy, with canonical slugs represented as a list of nonempty
+strings. These validation rules do not change the admitted publisher blobs.
+
 Before it looks up evidence, reads checkout revisions or writes a receipt, the
 verifier makes four checks:
 
