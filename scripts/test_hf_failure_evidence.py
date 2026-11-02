@@ -14,6 +14,7 @@ import sys
 import tempfile
 import unittest
 import unittest.mock as mock
+import urllib.error
 
 SCRIPT = Path(__file__).with_name('verify-hf-ownership.py')
 spec = importlib.util.spec_from_file_location('lyte_ownership_failure_test', SCRIPT)
@@ -105,6 +106,58 @@ class FailureEvidenceTests(unittest.TestCase):
         self.assertIs(raised.exception, error)
         self.assert_blocked('backend_source_evidence')
         self.assertNotIn('SYNTHETIC_SECRET', self.failure_output.read_text(encoding='utf-8'))
+
+    def test_authenticated_github_request_uses_fixed_read_only_headers(self):
+        response = mock.MagicMock()
+        response.__enter__.return_value = response
+        response.read.return_value = b'{"ok": true}'
+        opener = mock.Mock()
+        opener.open.return_value = response
+        token = 'synthetic-actions-token'
+        with mock.patch.dict(verifier.os.environ, {'GITHUB_TOKEN': token}, clear=True), \
+             mock.patch.object(verifier.urllib.request, 'build_opener', return_value=opener):
+            self.assertEqual(
+                verifier.github_json('/repos/szl-holdings/lyte-services/commits/main'),
+                {'ok': True})
+        request = opener.open.call_args.args[0]
+        headers = {key.lower(): value for key, value in request.header_items()}
+        self.assertEqual(request.full_url,
+                         'https://api.github.com/repos/szl-holdings/lyte-services/commits/main')
+        self.assertEqual(headers['authorization'], f'Bearer {token}')
+        self.assertEqual(headers['accept'], 'application/vnd.github+json')
+        self.assertEqual(headers['x-github-api-version'], '2022-11-28')
+        self.assertEqual(headers['user-agent'], 'SZL-Lyte-ReadOnly-Authority/4')
+        self.assertEqual(opener.open.call_args.kwargs, {'timeout': 30})
+
+    def test_missing_github_token_fails_before_network_and_retains_blocked_evidence(self):
+        self.put(self.publisher / verifier.PUBLISHER_PATH, '# dynamic publisher\n')
+        with mock.patch.object(verifier, 'validate_publisher_closure', return_value={}), \
+             mock.patch.dict(verifier.os.environ, {}, clear=True), \
+             mock.patch.object(verifier.urllib.request, 'build_opener') as opener:
+            with self.assertRaisesRegex(
+                    verifier.ContractError, 'token is unavailable or malformed'):
+                self.invoke()
+        opener.assert_not_called()
+        self.assert_blocked('backend_source_evidence')
+
+    def test_github_rate_limit_and_refusal_fail_closed_with_blocked_evidence(self):
+        self.put(self.publisher / verifier.PUBLISHER_PATH, '# dynamic publisher\n')
+        token = 'synthetic-actions-token'
+        for status in (403, 429):
+            opener = mock.Mock()
+            opener.open.side_effect = urllib.error.HTTPError(
+                'https://api.github.com/fixed', status, 'synthetic refusal', {}, None)
+            with self.subTest(status=status), \
+                 mock.patch.object(verifier, 'validate_publisher_closure', return_value={}), \
+                 mock.patch.dict(verifier.os.environ, {'GITHUB_TOKEN': token}, clear=True), \
+                 mock.patch.object(verifier.urllib.request, 'build_opener', return_value=opener):
+                with self.assertRaisesRegex(
+                        verifier.ContractError, 'rate limited or refused'):
+                    self.invoke()
+                result = self.assert_blocked('backend_source_evidence')
+                self.assertNotIn(token, self.failure_output.read_text(encoding='utf-8'))
+                self.assertEqual(result['failure']['code'],
+                                 'SOURCE_AUTHORITY_VERIFICATION_FAILED')
 
     def test_invalid_alignment_json_is_not_relabelled_as_success(self):
         self.put(self.governance / 'estate/alignment.v1.json', '{broken')
