@@ -8,6 +8,7 @@ export const TYPESCRIPT_TESTS = [
   "src/lib/auth/gate-identity.test.ts",
   "src/lib/grok-contract.test.ts",
   "src/lib/completion-history.test.ts",
+  "src/lib/organ-act.test.ts",
 ];
 
 // Pass real filenames directly to Node. Shell glob quoting differs between
