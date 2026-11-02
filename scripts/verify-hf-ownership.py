@@ -1062,39 +1062,88 @@ def revision(root: Path) -> str:
         raise ContractError('Checkout is not bound to a full commit identity')
     return value
 
+def retain_failure(output: Path, stage: str, content: dict[str, str],
+                   dependencies: dict[str, str]) -> None:
+    """Retain source observations without admitting the refused publisher.
+
+    Exception text and source contents never enter this public receipt. No new
+    source reads, checkout subprocesses or network requests run after refusal.
+    The caller always re-raises its original exception, including when this
+    best-effort evidence write fails.
+    """
+    result = {
+        'schema': 'szl.lyte.canonical-delegation-failure/v1',
+        'state': 'BLOCKED',
+        'scope': 'SOURCE_AUTHORITY_FAILURE_ONLY_NOT_RUNTIME_ACCEPTANCE',
+        'source_authority_verified': False,
+        'provider_writes': False,
+        'provider_credentials_local': False,
+        'runtime_observed': False,
+        'failure': {'code': 'SOURCE_AUTHORITY_VERIFICATION_FAILED', 'stage': stage},
+        'input_sha256': {key: hashlib.sha256(value.encode()).hexdigest()
+                         for key, value in content.items()},
+        'publisher_dependency_blobs': {path: git_blob(value)
+                                       for path, value in dependencies.items()},
+    }
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(result, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source', type=Path, required=True)
     parser.add_argument('--governance', type=Path, required=True)
     parser.add_argument('--publisher', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--failure-output', type=Path,
+                        help='Optional separate blocked source-observation receipt on failure')
     args = parser.parse_args()
+    if args.failure_output is not None and args.failure_output.resolve() == args.output.resolve():
+        parser.error('--failure-output must differ from the admitted --output path')
     paths = {'alignment': args.governance / 'estate/alignment.v1.json',
              'publisher': args.publisher / PUBLISHER_PATH,
              'entrypoint': args.publisher / ENTRYPOINT_PATH,
              'workflow': args.publisher / WORKFLOW_PATH,
              'caller': args.source / '.github/workflows/hf-deploy.yml',
              'readme': args.source / 'README.md'}
-    content = {key: path.read_bytes().decode('utf-8') for key, path in paths.items()}
-    alignment = parse_alignment(content['alignment'])
-    # Every production CLI invocation admits the entire reviewed closure first,
-    # reading every registered file from the publisher checkout and deriving the
-    # workflow-selected route. A legacy static SOURCE_REVISION cannot bypass it.
-    dependencies = {path: (args.publisher / path).read_bytes().decode('utf-8')
-                    for path in DYNAMIC_DEPENDENCY_BLOBS}
-    closure = validate_publisher_closure(content['publisher'], content['entrypoint'],
-                                         content['workflow'], dependencies)
-    source = {'publisher_dependencies': dependencies}
-    if 'SOURCE_REVISION' not in constants(content['publisher']):
-        source['source_head'], source['source_checks'] = read_source_evidence()
-    result = validate(alignment, content['publisher'], content['entrypoint'], content['workflow'], content['caller'], content['readme'], **source)
-    result['checkout_revisions'] = {'presentation': revision(args.source), 'governance': revision(args.governance), 'publisher': revision(args.publisher)}
-    result['input_sha256'] = {key: hashlib.sha256(value.encode()).hexdigest() for key, value in content.items()}
-    result['publisher_dependency_blobs'] = dict(DYNAMIC_DEPENDENCY_BLOBS)
-    result['publisher_execution_closure'] = closure
-    if 'source_head' in source:
-        require_current_source(result['backend_source_revision'])
-        result['backend_tip_reverified'] = True
+    content: dict[str, str] = {}
+    dependencies: dict[str, str] = {}
+    stage = 'read_inputs'
+    try:
+        for key, path in paths.items():
+            content[key] = path.read_bytes().decode('utf-8')
+        stage = 'alignment_manifest'
+        alignment = parse_alignment(content['alignment'])
+        # Every production CLI invocation admits the entire reviewed closure
+        # first. A legacy static SOURCE_REVISION cannot bypass it.
+        stage = 'read_publisher_dependencies'
+        for path in DYNAMIC_DEPENDENCY_BLOBS:
+            dependencies[path] = (args.publisher / path).read_bytes().decode('utf-8')
+        stage = 'publisher_closure'
+        closure = validate_publisher_closure(content['publisher'], content['entrypoint'],
+                                             content['workflow'], dependencies)
+        source = {'publisher_dependencies': dependencies}
+        stage = 'backend_source_evidence'
+        if 'SOURCE_REVISION' not in constants(content['publisher']):
+            source['source_head'], source['source_checks'] = read_source_evidence()
+        stage = 'delegation_contract'
+        result = validate(alignment, content['publisher'], content['entrypoint'], content['workflow'], content['caller'], content['readme'], **source)
+        stage = 'checkout_revisions'
+        result['checkout_revisions'] = {'presentation': revision(args.source), 'governance': revision(args.governance), 'publisher': revision(args.publisher)}
+        result['input_sha256'] = {key: hashlib.sha256(value.encode()).hexdigest() for key, value in content.items()}
+        result['publisher_dependency_blobs'] = dict(DYNAMIC_DEPENDENCY_BLOBS)
+        result['publisher_execution_closure'] = closure
+        stage = 'backend_tip_recheck'
+        if 'source_head' in source:
+            require_current_source(result['backend_source_revision'])
+            result['backend_tip_reverified'] = True
+    except Exception:
+        if args.failure_output is not None:
+            try:
+                retain_failure(args.failure_output, stage, content, dependencies)
+            except Exception:
+                print('Failure evidence could not be retained; original verification failure follows.',
+                      file=sys.stderr)
+        raise
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2, sort_keys=True) + '\n', encoding='utf-8')
     print(json.dumps(result, sort_keys=True))
