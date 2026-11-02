@@ -16,6 +16,9 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: npm
       - run: npm ci
+      - name: Typecheck application contracts
+        if: matrix.node-version == '22'
+        run: npm run typecheck
       - name: Verify offline script, auth, connector, and completion contracts
         if: matrix.node-version == '22'
         run: npm test
