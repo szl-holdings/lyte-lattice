@@ -152,7 +152,7 @@ Authority manifests must contain object-shaped
 public bodies and policy, with canonical slugs represented as a list of nonempty
 strings. These validation rules do not change the admitted publisher blobs.
 
-Before it looks up evidence, reads checkout revisions or writes a receipt, the
+Before it looks up evidence, reads checkout revisions or writes an admitted receipt, the
 verifier makes four checks:
 
 1. Every admitted path must have its exact reviewed blob; CRLF and LF bytes are
@@ -212,6 +212,19 @@ while this entire closure is byte-identical; the exact checkout revision is
 recorded.
 
 ## Remaining limits
+
+The workflow opts into a separate `szl.lyte.canonical-delegation-failure/v1`
+receipt with `--failure-output` when verification fails. Its state is `BLOCKED`,
+source authority is unverified, and no provider write or runtime acceptance is
+asserted. It records the failed stage and hashes of inputs already read before
+the failure. It does not claim checkout identities or run any new subprocess,
+source read or network request during failure handling. Exception text and
+source contents are excluded. The original exception still exits nonzero, and
+the workflow attempts artifact retention even after failure. Without this
+explicit option, the CLI still writes no receipt on rejected admission. The
+failure and admitted output paths must differ. A failure receipt does not admit
+a new publisher blob or replace the review required below.
+
 
 - Exact blob binding means any change to any of these 23 files, including
   unrelated Terra, Finance or vertical-services edits, turns this verifier red
