@@ -4,7 +4,16 @@
   "sideEffects": false,
   "type": "module",
   "overrides": {
-    "nf3": "0.3.17"
+    "nf3": "0.3.17",
+    "@eslint/config-array@0.23.5": {
+      "minimatch": "11.0.3"
+    },
+    "@typescript-eslint/typescript-estree@8.72.0": {
+      "minimatch": "11.0.3"
+    },
+    "eslint@^10.13.0": {
+      "minimatch": "11.0.3"
+    }
   },
   "scripts": {
     "dev": "node scripts/with-app-env.mjs vite dev --host 0.0.0.0 --port 8080",
