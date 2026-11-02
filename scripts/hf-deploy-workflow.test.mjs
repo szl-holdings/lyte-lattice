@@ -17,9 +17,9 @@ function eventBlock(name) {
 
 test("every main update schedules read-only ownership verification", () => {
   const push = eventBlock("push");
-  assert.match(push, /^    branches: \[main\]$/m);
-  assert.doesNotMatch(push, /^    paths(?:-ignore)?:/m);
-  assert.match(WORKFLOW, /^permissions:\n  contents: read$/m);
+  assert.match(push, /^ {4}branches: \[main\]$/m);
+  assert.doesNotMatch(push, /^ {4}paths(?:-ignore)?:/m);
+  assert.match(WORKFLOW, /^permissions:\n {2}contents: read$/m);
   assert.match(WORKFLOW, /run: python -I source\/scripts\/test_hf_ownership\.py/);
   assert.match(WORKFLOW, /python -I source\/scripts\/verify-hf-ownership\.py/);
   assert.match(WORKFLOW, /--source source --governance governance --publisher publisher/);
@@ -30,6 +30,6 @@ test("every main update schedules read-only ownership verification", () => {
 
 test("pull request validation remains narrowly path-scoped", () => {
   const pullRequest = eventBlock("pull_request");
-  assert.match(pullRequest, /^    branches: \[main\]$/m);
-  assert.match(pullRequest, /^    paths:$/m);
+  assert.match(pullRequest, /^ {4}branches: \[main\]$/m);
+  assert.match(pullRequest, /^ {4}paths:$/m);
 });
