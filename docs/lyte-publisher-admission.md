@@ -2,56 +2,46 @@
 
 The presentation package's read-only ownership verifier admits exact Git blobs
 from `szl-holdings/a11oy`. The complete 23-file closure below was reviewed at
-verified commit `58a0e102e8ebc0b35af86be3ec2de3b6c4e41d66` on 2026-10-16.
-This supersedes the 21-file admission at
-`e6cf9d06c92827225054550533e1a091b59f1031`: seven registered blobs changed and
-two newly loaded helpers are now bound. The closure analyzer and its rejection
-rules are unchanged; the new registry equals the complete derived closure.
+verified commit `deb1aa4f24252747b72edfe77905fe7567d11716` on 2026-11-02 UTC
+(November 1 Eastern). It supersedes the admission at
+`58a0e102e8ebc0b35af86be3ec2de3b6c4e41d66`: four blobs changed, 19 are unchanged,
+and no executable dependency was added or removed. The closure analyzer,
+exact-byte rejection rules, and source-evidence gates are unchanged.
 
 ## Changes reviewed for this admission
 
-- **Entrypoint.** Single-target publications distinguish supersession from
-  failure. Lyte supersession is neutral only before provider writes or after
-  live verification, as proved by the release journal. A moved main after an
-  unverified write stays failed. The default estate route and explicit Lyte
-  route remain the admitted scopes. The Lyte publisher bytes are unchanged.
-- **Existing-Space guard.** SDK methods deny mutations of `SZLHOLDINGS/a11oy`
-  by default; reviewed reads remain allowed. Import-time SDK aliases are
-  rebound, and synchronous/asynchronous SDK transport hooks refuse canonical
-  Space mutations. This does not grant sibling writers canonical authority.
-- **Generated-flagship overlay.** Terra uses Forge 0.2.3's independently checked
-  receipt header and event-chain tip. Upstream failures produce HTTP 503 and
-  readiness preserves upstream evidence. Bounded reads retain error-response
-  JSON without changing its status. Publication verification distinguishes
-  intact source artifacts with unavailable upstream data from invalid bytes.
-  Its temporary verification view accepts exact HTTP 503 `UPSTREAM_UNAVAILABLE`
-  only when both artifact hash checks pass, and preserves the actual upstream
-  row. That establishes artifact publication, never runtime readiness.
-- **Native presentation helper.** The new helper reads bounded regular files
-  using no-follow descriptors, checks the existing CSS/icon source records,
-  and derives presentation with unchanged operational script tags. It performs
-  no network requests or provider writes. Its CSS and artwork inputs remain
-  data inputs rather than admitted executable blobs. The Terra template credit
-  retains the legacy 0.2.2 marker wording; Forge authority is the verified
-  0.2.3 receipt, not that presentation marker.
-- **Sentra observation helper.** The new helper emits an isolated runtime
-  observation cache: single-flight requests, bounded backoff, a 120-second
-  last-good lifetime, and rejection of invalid manifest contracts. A cache hit
-  is `SNAPSHOT`; it never claims receipt verification. It has no import-time
-  requests, provider writes or receipt emission.
-- **Finance projection and witnesses.** Compatibility now uses the explicitly
-  declared `szl.finance.read-api/1` contract and exact analytics/signed-price
-  components, rather than equality between the projection and canonical Git
-  revisions. Responses still report a nonzero exact revision, nested revisions
-  must agree, private sources remain denied, and canonical requests use the
-  fixed public origin without credentials. The pre-write witness exercises the
-  served routes with the emitted validators; readiness checks the contract and
-  components. This does not certify provider data or execution authority.
-- **Workflow.** Changes outside the vertical publication job add passive browser
-  evidence and independently admitted execution evidence to canonical readiness
-  and relock. The vertical job's four executable roots are unchanged. The full
-  workflow remains bound, including those other jobs; this receipt certifies
-  only the selected publication route's source ownership.
+- **Selected workflow job.** `publish-vertical-flagships` retains the same four
+  executable roots, default estate route, targets, credential variables,
+  exact-main and explicit vertical-plan gates. Only its pinned setup-python
+  and harden-runner action revisions changed. Third-party action internals
+  remain outside this source-delegation closure.
+- **Other workflow jobs.** The bound workflow also adds the separate
+  independently approved execution-handoff path, updates the canonical deploy
+  reusable workflow and attestation permissions, and wires readiness/relock
+  to that handoff. Those jobs are not executed by this presentation verifier
+  and are not certified by this selected-route admission. No runtime execution
+  approval, provider credential, or production authorization is granted here.
+- **Repair-plan helper.** Maintenance-window forwarding is a new optional
+  input, defaulting false. The selected vertical-plan invocation supplies no
+  such flag: it still validates the exact source and approved vertical plan,
+  emits decision data only, and does not dispatch a workflow or write a provider.
+- **Completion helper.** Optional maintenance-window forwarding and clearer
+  closed-window diagnostics affect its imported dispatch API. The selected
+  job invokes the unchanged no-argument `main`, which requires successful
+  publication and verifies the existing v4 source/run-bound receipt. A skipped
+  or failed publication still fails; diagnostics never authorize a write.
+- **Generated runtime requirements.** The sole requirement change is
+  `certifi==2026.7.22` to `certifi==2026.10.19`. This records the emitted
+  dependency pin, not an installation, dependency security audit, or runtime
+  qualification. Publisher, entrypoint, release guard, Lyte live contract,
+  existing-Space guard, exact-main gate and both controller pins are unchanged.
+
+Validation used the exact 23 files from the reviewed commit: the previous
+registry rejected the workflow blob; the updated registry derives the same
+complete closure and rejects mutations of each of the four changed files.
+The existing 65 offline authority tests remain required. The fixture evidence
+and static closure check do not execute publisher code, install provider SDKs,
+contact Hugging Face, or establish that backend checks currently pass.
 
 ## Admitted scope: the default estate route, not Lyte alone
 
@@ -74,19 +64,19 @@ Lyte and fails closed. So does any non-literal scope value.
 
 | Path | Git blob | Role |
 | --- | --- | --- |
-| `.github/workflows/hf-sync.yml` | `a955e43f7878b050a849d597b245581c396fac9f` | Workflow; job invokes the entrypoint with the default scope |
+| `.github/workflows/hf-sync.yml` | `44d16fd595c83dede79cbb4f7b1c8b0512861f01` | Workflow; job invokes the entrypoint with the default scope |
 | `scripts/hf_publish_vertical_flagships_v4.py` | `199cd4d30e86c6b0e01aeb7818803bb7d68d6a70` | Entrypoint and scope dispatch |
 | `scripts/hf_publish_lyte_enterprise.py` | `7c533d753a2b913a77bb71074f04aa5b753b0392` | Lyte publisher (`SZLHOLDINGS/lyte`) |
 | `scripts/szl_release_guard.py` | `f6c7bc02df02076388be5fa0b6949d8929cc2ba2` | Lyte release primitive |
 | `scripts/lyte_enterprise_live_contract.py` | `494116f65b24ea5b8a516abde31668be2248cbf4` | Lyte live contract |
 | `scripts/hf_existing_space_guard.py` | `ebab5d507ba589bb64d01a45bf32a03c2b52cb45` | Existing-Space guard on `HfApi.create_repo` |
 | `scripts/hf_exact_main_ownership.py` | `6e95133ac74f0d05d5372ed68022a691ceaa15c2` | Job gate: exact protected main |
-| `scripts/estate_repair_dispatch.py` | `81f0e83729390ee66b633a8d45e5f1139374ba41` | Job gate: approved vertical plan |
-| `scripts/estate_child_completion.py` | `5e59e91824d58da9bcc650c623c3bdfaf6f0040b` | Job gate: completion receipt |
+| `scripts/estate_repair_dispatch.py` | `0ba5f87268c43b60cb85fd0bcc519b6be7b94633` | Job gate: approved vertical plan |
+| `scripts/estate_child_completion.py` | `202a41f5557fa5c9a121729e8e7b07fb271917e2` | Job gate: completion receipt |
 | `scripts/hf_publish_vertical_flagships_v4_impl.py` | `421188ba9e1dcce78bf2503e4b10ead3e126bded` | Generated-flagship overlay (runs before Lyte) |
 | `scripts/_hf_publish_vertical_flagships_v4_impl_base.py` | `419931621a3d7de4da233840762761c4207007f5` | Generated-flagship writer |
 | `scripts/hf_finance_read_proxy.py` | `56ec9cd7df6eef37e59395ce35e010637487211c` | Finance projection emitted into the Space app |
-| `scripts/hf_flagship_runtime_contract.py` | `1b3571a8b49c31f12307bf44e77c303d2b86fb32` | Generated Space Dockerfile and requirements |
+| `scripts/hf_flagship_runtime_contract.py` | `d9394a81a7407ca36e55ed1b068fbf11f3b2acc8` | Generated Space Dockerfile and requirements |
 | `scripts/hf_finance_workspace.py` | `6bf54deb552bdf94578cef45f84ead8a2318c3aa` | Finance presentation |
 | `scripts/hf_finance_research_workspace.py` | `18ba3c0a1feb776e7f12f46c5b69b6069b597180` | Finance presentation |
 | `scripts/hf_finance_signed_workspace.py` | `febc20a7dc1391d35397bb81e38222135eb3d100` | Finance presentation |
