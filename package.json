@@ -3,6 +3,9 @@
   "private": true,
   "sideEffects": false,
   "type": "module",
+  "engines": {
+    "node": "^22.13.0 || >=24.0.0"
+  },
   "overrides": {
     "nf3": "0.3.17",
     "@eslint/config-array@0.23.5": {

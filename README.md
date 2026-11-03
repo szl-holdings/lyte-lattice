@@ -110,12 +110,17 @@ Owner order `AO-2026-08-29-001` admits this as an A11oy package, not a second fl
 
 ## Develop
 
+Use Node.js 22.13 or later in the 22.x line, or Node.js 24 or later. The locked
+TanStack Start packages require Node 22.12+, and ESLint 10 raises the development
+minimum to 22.13 while excluding Node 23. `package.json` declares this shared
+contract and `.npmrc` enforces dependency engines during installation.
+
 ```bash
 npm ci
 npm run dev
 # Compile the presentation without a database migration:
 npm run build:dev
-# Complete offline regression suite (Node 22.6+):
+# Complete offline regression suite:
 npm test
 # Offline authority regression tests:
 python scripts/test_hf_ownership.py
@@ -127,9 +132,10 @@ source, browser bundles, and evidence receipts.
 
 `npm test` discovers script tests without shell globs and also runs the auth,
 connector, completion-request and streaming suites. Missing suites and child
-process failures fail the command. CI runs this complete suite on Node 22;
-the build matrix remains Node 20 and 22. Brand asset maintenance is documented
-in [docs/brand-assets.md](docs/brand-assets.md).
+process failures fail the command. CI installs with engine checks enforced and
+runs the complete suite and development build on Node 22 and 24. The Node 22
+job also requires source and contract lint to pass without warnings. Brand asset
+maintenance is documented in [docs/brand-assets.md](docs/brand-assets.md).
 
 Set `XAI_API_KEY` on the application server to use the completion integration.
 The model is pinned to `grok-4.7` (`DEFAULT_GROK_MODEL` in

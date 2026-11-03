@@ -17,36 +17,34 @@ export const Route = createFileRoute("/$cell")({
   beforeLoad: ({ params }) => {
     if (!isCellId(params.cell) || params.cell === "lyte") throw redirect({ to: "/" });
   },
-  component: CellRoute,
+  component: function CellRoute() {
+    const { cell } = Route.useParams();
+    const id = cell as CellId;
+    switch (id) {
+      case "serve":
+        return <ServeView />;
+      case "graph":
+        return <GraphView />;
+      case "guard":
+        return <GuardView />;
+      case "mosaic":
+        return <MosaicView />;
+      case "lattice":
+        return <LatticeView />;
+      case "cover":
+        return <CoverView />;
+      case "quant":
+        return <QuantView />;
+      case "retrieve":
+        return <RetrieveView />;
+      case "observe":
+        return <ObserveView />;
+      case "tune":
+        return <TuneView />;
+      case "schema":
+        return <SchemaView />;
+      default:
+        return <OrganDesk id={id} />;
+    }
+  },
 });
-
-function CellRoute() {
-  const { cell } = Route.useParams();
-  const id = cell as CellId;
-  switch (id) {
-    case "serve":
-      return <ServeView />;
-    case "graph":
-      return <GraphView />;
-    case "guard":
-      return <GuardView />;
-    case "mosaic":
-      return <MosaicView />;
-    case "lattice":
-      return <LatticeView />;
-    case "cover":
-      return <CoverView />;
-    case "quant":
-      return <QuantView />;
-    case "retrieve":
-      return <RetrieveView />;
-    case "observe":
-      return <ObserveView />;
-    case "tune":
-      return <TuneView />;
-    case "schema":
-      return <SchemaView />;
-    default:
-      return <OrganDesk id={id} />;
-  }
-}

@@ -1,45 +1,53 @@
 # Canonical Lyte publisher source admission
 
 The presentation package's read-only ownership verifier admits exact Git blobs
-from `szl-holdings/a11oy`. The complete 23-file closure below was reviewed at
-verified commit `deb1aa4f24252747b72edfe77905fe7567d11716` on 2026-11-02 UTC
-(November 1 Eastern). It supersedes the admission at
-`58a0e102e8ebc0b35af86be3ec2de3b6c4e41d66`: four blobs changed, 19 are unchanged,
-and no executable dependency was added or removed. The closure analyzer,
-exact-byte rejection rules, and source-evidence gates are unchanged.
+from `szl-holdings/a11oy`. The complete 23-file closure below received agent
+source review at verified commit `d3aee5e86b57def71addc04c0510a7b23c752cff`
+on 2026-11-03 UTC. It supersedes the admission at
+`deb1aa4f24252747b72edfe77905fe7567d11716`: only the bound workflow blob changed;
+22 files are unchanged and no executable dependency was added or removed.
+The closure analyzer, exact-byte rejection rules and source-evidence gates are
+unchanged. This records agent source review, not human-owner approval or
+independent execution or production authorization.
 
 ## Changes reviewed for this admission
 
-- **Selected workflow job.** `publish-vertical-flagships` retains the same four
-  executable roots, default estate route, targets, credential variables,
-  exact-main and explicit vertical-plan gates. Only its pinned setup-python
-  and harden-runner action revisions changed. Third-party action internals
-  remain outside this source-delegation closure.
-- **Other workflow jobs.** The bound workflow also adds the separate
-  independently approved execution-handoff path, updates the canonical deploy
-  reusable workflow and attestation permissions, and wires readiness/relock
-  to that handoff. Those jobs are not executed by this presentation verifier
-  and are not certified by this selected-route admission. No runtime execution
-  approval, provider credential, or production authorization is granted here.
-- **Repair-plan helper.** Maintenance-window forwarding is a new optional
-  input, defaulting false. The selected vertical-plan invocation supplies no
-  such flag: it still validates the exact source and approved vertical plan,
-  emits decision data only, and does not dispatch a workflow or write a provider.
-- **Completion helper.** Optional maintenance-window forwarding and clearer
-  closed-window diagnostics affect its imported dispatch API. The selected
-  job invokes the unchanged no-argument `main`, which requires successful
-  publication and verifies the existing v4 source/run-bound receipt. A skipped
-  or failed publication still fails; diagnostics never authorize a write.
-- **Generated runtime requirements.** The sole requirement change is
-  `certifi==2026.7.22` to `certifi==2026.10.19`. This records the emitted
-  dependency pin, not an installation, dependency security audit, or runtime
-  qualification. Publisher, entrypoint, release guard, Lyte live contract,
-  existing-Space guard, exact-main gate and both controller pins are unchanged.
+- **Workflow boundaries.** All changes are inside `execution-handoff`.
+  `publish-vertical-flagships` is byte-identical, as are every other job and
+  the workflow's triggers, permissions, concurrency and global configuration.
+  Job dependencies and job-level conditions are unchanged, including the
+  handoff's `contents: read` permission and existing downstream readiness/relock
+  dependencies. No publication target, scope, credential variable or gate changes.
+- **Failure handling.** Existing before/after exact-main checks now expose
+  step outputs through `GITHUB_OUTPUT`; both still require `publish=true`.
+  The context command adds a separate failure-output path. A failure-only
+  recorder classifies the failed stage without clearing the failed job,
+  making a request or granting execution authority.
+- **Artifact contents and access.** Successful and blocked uploads are split.
+  The same three readback/ownership paths remain; only the structured failure
+  JSON is added. Uploads use exact paths, the same pinned action and the same
+  90-day retention. Repository Actions access is unchanged; these artifacts
+  are not secret storage. The failure writer emits only a validated source
+  SHA, bounded code/stage, false authorization flags and allowlisted missing
+  variable names, never raw configuration values, provider bodies, exception
+  text, credentials or signed URLs. Existing ownership errors retain only
+  type and message hash; existing readback retains projected public identities,
+  storage identifiers/hashes/counts and the public authority-pins hash.
+- **Reviewed supporting code.** At the same immutable commit, the handoff
+  helper is blob `d7c7a15df68c73f6c264948e43ef3035feb92315` and its collector is
+  blob `85246d7d9b1b6057c5141889944f9a4c19b50fd8`. Their new failure path uses a
+  trusted local exclusive writer. The reader validates known fields but does
+  not reject every extra JSON key: this is not arbitrary-file redaction.
+  No untrusted file input is introduced. Cancellation can now skip both upload
+  conditions, an evidence-availability limitation compared with `always()`.
+  These supporting files are outside the selected publisher execution closure;
+  this point-in-time review does not continuously pin or certify other jobs.
 
 Validation used the exact 23 files from the reviewed commit: the previous
 registry rejected the workflow blob; the updated registry derives the same
-complete closure and rejects mutations of each of the four changed files.
-The existing 65 offline authority tests remain required. The fixture evidence
+complete closure and rejects mutations of all 23 files, including an unknown
+workflow. Offline authority and failure-receipt regressions remain required.
+The fixture evidence
 and static closure check do not execute publisher code, install provider SDKs,
 contact Hugging Face, or establish that backend checks currently pass.
 
@@ -64,7 +72,7 @@ Lyte and fails closed. So does any non-literal scope value.
 
 | Path | Git blob | Role |
 | --- | --- | --- |
-| `.github/workflows/hf-sync.yml` | `44d16fd595c83dede79cbb4f7b1c8b0512861f01` | Workflow; job invokes the entrypoint with the default scope |
+| `.github/workflows/hf-sync.yml` | `2bd1510285ad7d40dc2af3f11420de927438b329` | Workflow; job invokes the entrypoint with the default scope |
 | `scripts/hf_publish_vertical_flagships_v4.py` | `199cd4d30e86c6b0e01aeb7818803bb7d68d6a70` | Entrypoint and scope dispatch |
 | `scripts/hf_publish_lyte_enterprise.py` | `7c533d753a2b913a77bb71074f04aa5b753b0392` | Lyte publisher (`SZLHOLDINGS/lyte`) |
 | `scripts/szl_release_guard.py` | `f6c7bc02df02076388be5fa0b6949d8929cc2ba2` | Lyte release primitive |
