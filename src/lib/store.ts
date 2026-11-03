@@ -263,9 +263,9 @@ export const useLyte = create<LyteState>()(
           return;
         }
         set((s) => {
-          let isolated = [...s.isolated];
-          let throttled = [...s.throttled];
-          let humanLock = [...s.humanLock];
+          const isolated = [...s.isolated];
+          const throttled = [...s.throttled];
+          const humanLock = [...s.humanLock];
           const log = [...s.latticeLog];
           for (const d of decisions) {
             if (d.action === "isolate" && !isolated.includes(d.target)) isolated.push(d.target);

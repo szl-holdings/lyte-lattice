@@ -1078,6 +1078,27 @@ class DynamicOwnershipContract(OwnershipContract):
                                       **owner.DYNAMIC_DEPENDENCY_BLOBS})
 
 
+class ReviewedSourceAdmission(unittest.TestCase):
+    def test_reviewed_commit_and_whole_workflow_identity_are_explicit(self):
+        self.assertEqual(owner.REVIEWED_PUBLISHER_COMMIT,
+                         'd3aee5e86b57def71addc04c0510a7b23c752cff')
+        self.assertEqual(owner.DYNAMIC_DEPENDENCY_BLOBS[owner.WORKFLOW_PATH],
+                         '2bd1510285ad7d40dc2af3f11420de927438b329')
+        self.assertEqual(len(owner.DYNAMIC_DEPENDENCY_BLOBS) + 2, 23)
+        self.assertEqual(owner.SOURCE_REQUIRED_CHECKS, REQUIRED_CHECKS)
+
+    def test_admission_document_matches_every_reviewed_source_identity(self):
+        document = (Path(__file__).resolve().parents[1] /
+                    'docs/lyte-publisher-admission.md').read_text(encoding='utf-8')
+        self.assertIn(owner.REVIEWED_PUBLISHER_COMMIT, document)
+        registry = {owner.PUBLISHER_PATH: owner.DYNAMIC_PUBLISHER_BLOB,
+                    owner.ENTRYPOINT_PATH: owner.DYNAMIC_ENTRYPOINT_BLOB,
+                    **owner.DYNAMIC_DEPENDENCY_BLOBS}
+        for path, blob in registry.items():
+            with self.subTest(path=path):
+                self.assertIn(f'| `{path}` | `{blob}` |', document)
+
+
 class PublisherIsolation(unittest.TestCase):
     def test_publisher_text_is_parsed_without_execution(self):
         self.assertEqual(owner.constants('SOURCE_REVISION = "' + 'a' * 40 + '"\nraise RuntimeError("must never run")')['SOURCE_REVISION'], 'a' * 40)
