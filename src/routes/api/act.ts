@@ -48,22 +48,31 @@ export const Route = createFileRoute("/api/act")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        let data: { cell?: string; payload?: unknown };
+        let data: unknown;
         try {
-          data = (await request.json()) as { cell?: string; payload?: unknown };
+          data = await request.json();
         } catch {
           return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
         }
-        const cell = typeof data.cell === "string" ? data.cell.trim() : "";
+        if (data === null || typeof data !== "object" || Array.isArray(data)) {
+          return Response.json({ ok: false, error: "request must be a JSON object" }, { status: 400 });
+        }
+        const input = data as { cell?: unknown; payload?: unknown };
+        const cell = typeof input.cell === "string" ? input.cell.trim() : "";
         if (!cell) {
           return Response.json({ ok: false, error: "cell required" }, { status: 400 });
         }
-        const raw = JSON.stringify(data.payload ?? {});
-        if (raw.length > MAX_PAYLOAD) {
+        const payload = input.payload ?? {};
+        if (typeof payload !== "object" || Array.isArray(payload)) {
+          return Response.json({ ok: false, error: "payload must be a JSON object" }, { status: 400 });
+        }
+        const raw = JSON.stringify(payload);
+        // spawn transports the JSON argument as UTF-8, not UTF-16 code units.
+        if (Buffer.byteLength(raw, "utf8") > MAX_PAYLOAD) {
           return Response.json({ ok: false, error: "payload too large" }, { status: 413 });
         }
         try {
-          const { stdout, stderr, code } = await runOrgan(cell, data.payload ?? {});
+          const { stdout, stderr, code } = await runOrgan(cell, payload);
           const line = stdout.trim().split("\n").filter(Boolean).pop() ?? "";
           if (!line) {
             return Response.json(
