@@ -31,7 +31,6 @@ Product: [a-11-oy.com](https://a-11-oy.com) ·
 Proof: [a11oy.net](https://a11oy.net)
 <!-- /szl:header -->
 
-
 <!-- Native identity: szl-brand@4309f6fce89179331b0b3ed8c99494e76c5be256; Orbit v2 icon sha256 6e2b7d72a3af3d9602b79de41df0194ede6496a9661f057108ec224c0efc92e6. -->
 <!-- Surface Foundry: szl-brand@b519affbd63447c086cb74b6e0636661bcac09a6; input README.surface.json; receipt README.surface-receipt.json. Generation metadata is not live runtime evidence. -->
 <p><a href="https://github.com/szl-holdings"><img src="https://raw.githubusercontent.com/szl-holdings/szl-brand/4309f6fce89179331b0b3ed8c99494e76c5be256/kit/logos/orbit-v2/suite/szl-icon-32.svg" alt="SZL Holdings — Orbit v2" width="32" height="32" /></a></p>
