@@ -1,5 +1,3 @@
-<!-- szl:header v1 -->
-
 ---
 title: LYTE Lattice
 emoji: ⚖️
