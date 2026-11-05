@@ -52,3 +52,5 @@ jobs:
       # `selftest` is not a gate: it exits 1 by design because N27 Train is blocked.
       - name: CLI contract (one JSON value, fail closed, unsigned, no fabricated joule)
         run: python -I tests/test_lyte_cli_contract.py
+      - name: Blocked Hub handoff names the lyte-services runtime
+        run: python -I tests/test_command_centre_boundary.py
