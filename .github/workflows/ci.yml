@@ -16,6 +16,8 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: npm
       - run: npm ci
+      - name: Typecheck application contracts
+        run: npm run typecheck
       - name: Lint source and offline contracts without warnings
         if: matrix.node-version == '22'
         run: npm run lint -- --max-warnings 0
