@@ -2,54 +2,65 @@
 
 The presentation package's read-only ownership verifier admits exact Git blobs
 from `szl-holdings/a11oy`. The complete 23-file closure below received agent
-source review at verified commit `d3aee5e86b57def71addc04c0510a7b23c752cff`
-on 2026-11-03 UTC. It supersedes the admission at
-`deb1aa4f24252747b72edfe77905fe7567d11716`: only the bound workflow blob changed;
-22 files are unchanged and no executable dependency was added or removed.
-The closure analyzer, exact-byte rejection rules and source-evidence gates are
-unchanged. This records agent source review, not human-owner approval or
-independent execution or production authorization.
+source review at verified commit `06fecb6a836d5c10d04e638ab91df4e6db79ce52`
+on 2026-11-05 UTC. It supersedes the admission at
+`d3aee5e86b57def71addc04c0510a7b23c752cff`: only the bound workflow blob changed,
+from `2bd1510285ad7d40dc2af3f11420de927438b329` to
+`1f0b9f80893f1df021870df3608c424a40df96ab`. The other 22 files are unchanged
+and no executable dependency was added or removed. The closure analyzer,
+exact-byte rejection rules and source-evidence gates are unchanged. This
+records agent source review of those bytes, not a GitHub review approval,
+human-owner approval, independent execution, or production authorization.
 
 ## Changes reviewed for this admission
 
-- **Workflow boundaries.** All changes are inside `execution-handoff`.
-  `publish-vertical-flagships` is byte-identical, as are every other job and
-  the workflow's triggers, permissions, concurrency and global configuration.
-  Job dependencies and job-level conditions are unchanged, including the
-  handoff's `contents: read` permission and existing downstream readiness/relock
-  dependencies. No publication target, scope, credential variable or gate changes.
-- **Failure handling.** Existing before/after exact-main checks now expose
-  step outputs through `GITHUB_OUTPUT`; both still require `publish=true`.
-  The context command adds a separate failure-output path. A failure-only
-  recorder classifies the failed stage without clearing the failed job,
-  making a request or granting execution authority.
-- **Artifact contents and access.** Successful and blocked uploads are split.
-  The same three readback/ownership paths remain; only the structured failure
-  JSON is added. Uploads use exact paths, the same pinned action and the same
-  90-day retention. Repository Actions access is unchanged; these artifacts
-  are not secret storage. The failure writer emits only a validated source
-  SHA, bounded code/stage, false authorization flags and allowlisted missing
-  variable names, never raw configuration values, provider bodies, exception
-  text, credentials or signed URLs. Existing ownership errors retain only
-  type and message hash; existing readback retains projected public identities,
-  storage identifiers/hashes/counts and the public authority-pins hash.
-- **Reviewed supporting code.** At the same immutable commit, the handoff
-  helper is blob `d7c7a15df68c73f6c264948e43ef3035feb92315` and its collector is
-  blob `85246d7d9b1b6057c5141889944f9a4c19b50fd8`. Their new failure path uses a
-  trusted local exclusive writer. The reader validates known fields but does
-  not reject every extra JSON key: this is not arbitrary-file redaction.
-  No untrusted file input is introduced. Cancellation can now skip both upload
-  conditions, an evidence-availability limitation compared with `always()`.
-  These supporting files are outside the selected publisher execution closure;
-  this point-in-time review does not continuously pin or certify other jobs.
+The diff of `.github/workflows/hf-sync.yml` against the previous admitted blob
+is two hunks. No Lyte publisher, entrypoint, sibling publisher, publication
+target, scope, permission, secret, or Space visibility changes.
 
-Validation used the exact 23 files from the reviewed commit: the previous
-registry rejected the workflow blob; the updated registry derives the same
-complete closure and rejects mutations of all 23 files, including an unknown
-workflow. Offline authority and failure-receipt regressions remain required.
-The fixture evidence
-and static closure check do not execute publisher code, install provider SDKs,
-contact Hugging Face, or establish that backend checks currently pass.
+- **Canonical A11oy preflight.** In `preflight`, "Require an open deploy
+  window while SQLite lives on the bucket mount" no longer warns and continues
+  when the window is closed. A `PAUSED` stage or an explicit
+  `open_deploy_window` dispatch still sets `open=true`. Otherwise, when the
+  stage is `RUNNING`, the step reads `$CANONICAL_ORIGIN/api/build-info`
+  (`https://szlholdings-a11oy.hf.space`, Space `SZLHOLDINGS/a11oy`) and sets
+  `open=false` only if `build.revision` equals `GITHUB_SHA`. Every other
+  closed-window state exits 1 with
+  `PUBLICATION_BLOCKED_DEPLOY_WINDOW_CLOSED`. This is the canonical A11oy
+  Space job, not the Lyte publisher. The hunk arrived in a11oy #3221
+  (`bb950a8b65b8633a5ada713c6bc250c40a79c31b`), whose GitHub review list is
+  empty. That commit's workflow blob was
+  `d9a115a3f9d14e9a4129bfd3016663dcce2d488f`.
+- **Flagship job action pin.** `publish-vertical-flagships` changes one
+  action pin: `step-security/harden-runner` from
+  `dc2769abcc0fcfbadfc1df54081c1608579ef6b2` (v2.22.2) to
+  `46b06cea07f9e64621fdf066ba77ac6915163d43` (v2.22.3), still
+  `egress-policy: audit`. The job condition, needs, concurrency, secrets, and
+  publisher command are unchanged. The hunk arrived in a11oy #3166
+  (`d0226bb82b38255bc58131a8436fd4196e320402`), a Dependabot merge whose
+  GitHub review list is empty. That commit is where blob
+  `1f0b9f80893f1df021870df3608c424a40df96ab` first appears. The same blob is
+  still the file on `06fecb6a`.
+
+## Previous admission
+
+Commit `d3aee5e86b57def71addc04c0510a7b23c752cff` (2026-11-03 UTC) admitted
+workflow blob `2bd1510285ad7d40dc2af3f11420de927438b329` and superseded
+`deb1aa4f24252747b72edfe77905fe7567d11716`. That review is not reopened. Its
+workflow delta was inside `execution-handoff`: failure outputs through
+`GITHUB_OUTPUT`, a separate failure-receipt path, and split success and
+blocked artifacts. `publish-vertical-flagships` was byte-identical in that
+delta. The handoff helper blob `d7c7a15df68c73f6c264948e43ef3035feb92315` and
+collector blob `85246d7d9b1b6057c5141889944f9a4c19b50fd8` stay outside this
+closure.
+
+Validation used the exact 23 files from `06fecb6a`. The previous registry
+rejected the workflow blob; the updated registry derives the same complete
+closure and rejects mutations of all 23 files, including an unknown workflow.
+Offline authority and failure-receipt regressions remain required. The
+fixture evidence and static closure check do not execute publisher code,
+install provider SDKs, contact Hugging Face, or establish that backend
+checks currently pass.
 
 ## Admitted scope: the default estate route, not Lyte alone
 
