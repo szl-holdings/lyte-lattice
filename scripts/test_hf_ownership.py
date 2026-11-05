@@ -111,9 +111,25 @@ class OwnershipContract(unittest.TestCase):
                      '---\nshort_description: ""\n---\n',
                      '---\nshort_description: ' + 'x' * 61 + '\n---\n',
                      '---\nshort_description: key: unquoted\n---\n',
-                     '---\nshort_description: first\nshort_description: second\n---\n'):
+                     '---\nshort_description: first\nshort_description: second\n---\n',
+                     '<!-- szl:header v1 -->\n\n---\nshort_description: "Lyte package: canonical runtime"\n---\n'):
             with self.subTest(text=text), self.assertRaises(owner.ContractError):
                 owner.validate_card(text)
+    def test_repository_readme_starts_with_hub_yaml_before_estate_header(self):
+        """The checked-in card is the contract, not a synthetic stand-in.
+
+        Run 41855292921 failed after offline fixtures passed: squash merge of
+        #72 left ``<!-- szl:header v1 -->`` ahead of otherwise valid Hub YAML.
+        """
+        readme = Path(__file__).resolve().parents[1].joinpath('README.md').read_text(encoding='utf-8')
+        self.assertTrue(readme.startswith('---\n'), 'README must start with Hub YAML metadata')
+        owner.validate_card(readme)
+        header = readme.find('<!-- szl:header v1 -->')
+        closing = readme.find('\n---\n', 4)
+        self.assertGreater(header, closing)
+        prefixed = '<!-- szl:header v1 -->\n\n' + readme
+        with self.assertRaisesRegex(owner.ContractError, 'README must start with Hub YAML metadata'):
+            owner.validate_card(prefixed)
     def test_local_secrets_and_provider_writes_remain_forbidden(self):
         for addition in ('\nenv:\n  HF_TOKEN: not-a-token\n',
                          '\njobs:\n  permissions:\n    contents: write\n',
