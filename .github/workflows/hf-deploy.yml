@@ -75,6 +75,8 @@ jobs:
       - name: Verify blocked ownership evidence offline
         run: python -I source/scripts/test_hf_failure_evidence.py
       - name: Verify actual ownership and record the exact inspected commits
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: >-
           python -I source/scripts/verify-hf-ownership.py
           --source source --governance governance --publisher publisher

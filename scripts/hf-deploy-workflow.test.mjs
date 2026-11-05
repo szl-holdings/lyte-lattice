@@ -28,6 +28,16 @@ test("every main update schedules read-only ownership verification", () => {
   assert.doesNotMatch(WORKFLOW, /\b(?:upload_folder|upload_file|create_repo|restart_space|pause_space)\s*\(/);
 });
 
+test("live ownership read uses the Actions token and offline steps do not", () => {
+  const liveAt = WORKFLOW.indexOf("Verify actual ownership and record the exact inspected commits");
+  assert.ok(liveAt > 0);
+  const live = WORKFLOW.slice(liveAt, WORKFLOW.indexOf("Preserve the source-authority receipt"));
+  const offline = WORKFLOW.slice(0, liveAt);
+  assert.match(live, /GITHUB_TOKEN: \$\{\{ github\.token \}\}/);
+  assert.doesNotMatch(offline, /GITHUB_TOKEN|secrets\./);
+  assert.doesNotMatch(WORKFLOW, /secrets\.|HF_TOKEN|HUGGING_FACE/);
+});
+
 test("pull request validation remains narrowly path-scoped", () => {
   const pullRequest = eventBlock("pull_request");
   assert.match(pullRequest, /^ {4}branches: \[main\]$/m);
