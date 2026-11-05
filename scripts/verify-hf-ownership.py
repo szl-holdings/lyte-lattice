@@ -7,9 +7,11 @@ import ast
 import hashlib
 import json
 import posixpath
+import os
 import re
 import subprocess
 import sys
+import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -815,20 +817,31 @@ def admit_source_checks(head: dict, evidence: dict) -> str:
     return revision
 
 def github_json(path: str) -> dict:
-    """Read only the public backend's fixed GitHub origin, without credentials."""
+    """Read only the public backend's fixed GitHub origin with the workflow token."""
     allowed = r'/repos/szl-holdings/lyte-services/commits/(?:main|[0-9a-f]{40}/check-runs\?filter=latest&per_page=100&page=[1-9][0-9]?)'
     if re.fullmatch(allowed, path) is None:
         raise ContractError('Unadmitted GitHub source-evidence route')
+    token = os.environ.get('GITHUB_TOKEN', '')
+    if not token or token != token.strip() or '\r' in token or '\n' in token:
+        raise ContractError('GitHub source-evidence token is unavailable or malformed')
     class NoRedirect(urllib.request.HTTPRedirectHandler):
         def redirect_request(self, req, fp, code, msg, headers, newurl):
             raise ContractError('GitHub source-evidence redirect refused')
     request = urllib.request.Request('https://api.github.com' + path, headers={
-        'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28',
-        'Cache-Control': 'no-cache', 'User-Agent': 'SZL-Lyte-ReadOnly-Authority/3',
+        'Accept': 'application/vnd.github+json',
+        'Authorization': f'Bearer {token}',
+        'X-GitHub-Api-Version': '2022-11-28',
+        'Cache-Control': 'no-cache',
+        'User-Agent': 'SZL-Lyte-ReadOnly-Authority/4',
     })
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
-    with opener.open(request, timeout=30) as response:
-        payload = response.read(2_000_001)
+    try:
+        with opener.open(request, timeout=30) as response:
+            payload = response.read(2_000_001)
+    except urllib.error.HTTPError as exc:
+        if exc.code in (403, 429):
+            raise ContractError('GitHub source-evidence request was rate limited or refused') from None
+        raise ContractError(f'GitHub source-evidence request failed with HTTP {exc.code}') from None
     if len(payload) > 2_000_000:
         raise ContractError('GitHub source-evidence response exceeds its bound')
     def unique_object(pairs):
