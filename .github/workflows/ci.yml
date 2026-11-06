@@ -56,3 +56,5 @@ jobs:
         run: python -I tests/test_lyte_cli_contract.py
       - name: Blocked Hub handoff names the lyte-services runtime
         run: python -I tests/test_command_centre_boundary.py
+      - name: N21 sandbox matches Python and refuses unbounded integers quickly
+        run: python -I tests/test_n21_sandbox.py
