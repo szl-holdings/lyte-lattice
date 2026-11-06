@@ -22,6 +22,7 @@ import subprocess
 import sys
 import time
 import unittest
+from unittest import mock
 
 PYTHON_ROOT = Path(__file__).resolve().parent.parent / "python"
 sys.path.insert(0, str(PYTHON_ROOT))
@@ -145,6 +146,37 @@ class N21MatchesPython(unittest.TestCase):
                 self.assertIs(rec["output"]["allowed"], False)
                 self.assertIsNone(rec["output"]["result"])
                 self.assertEqual(rec["output"]["error"], f"bound exceeded: integer above {bits} bits")
+
+    def test_one_operation_builds_at_most_twice_the_bound(self):
+        # The organ docstring and README promise two things: a power whose size
+        # lower bound exceeds MAX_INT_BITS is refused before it is computed, and
+        # any other result is checked right after its operation, so no integer
+        # larger than 2 * MAX_INT_BITS is ever built. _bounded() sees every result.
+        bits = n21_sandbox.MAX_INT_BITS
+        top = f"(2 ** {bits - 1} + (2 ** {bits - 1} - 1))"  # 2**bits - 1, the largest admitted value
+        built: list[int] = []
+        original = n21_sandbox._bounded
+
+        def spy(value):
+            if isinstance(value, int):
+                built.append(value.bit_length())
+            return original(value)
+
+        # Every case stays cheap even if the pre-check regressed, so a regression
+        # fails here instead of hanging; the CLI test covers 9**9**9 with a timeout.
+        with mock.patch.object(n21_sandbox, "_bounded", spy):
+            for code, status, limit in (
+                (f"2 ** {bits}", "blocked", bits),             # refused before it is computed
+                (f"3 ** {bits}", "blocked", bits),             # refused before it is computed
+                (f"(2 ** {bits - 1}) ** 2", "blocked", bits),  # refused before it is computed
+                (f"3 ** {bits - 1}", "blocked", 2 * bits),     # computed, then refused
+                (f"{top} * {top}", "blocked", 2 * bits),       # computed, then refused
+                (f"{top} ** 1", "ok", bits),
+            ):
+                with self.subTest(code=code):
+                    built.clear()
+                    self.assertEqual(n21_sandbox.act({"code": code})["status"], status)
+                    self.assertLessEqual(max(built), limit)
 
 
 class N21RefusesUnboundedWorkQuickly(unittest.TestCase):

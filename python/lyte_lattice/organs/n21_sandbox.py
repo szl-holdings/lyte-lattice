@@ -3,9 +3,12 @@
 Not Daytona. Not E2B. Not a cloud VM. Arithmetic/boolean expressions only.
 
 The whitelisted tree is evaluated by a small interpreter, never ``eval()``.
-It applies Python's own operator functions, so results match Python, but every
-integer it builds is bounded to MAX_INT_BITS and a power whose result would be
-larger is refused before it is computed: ``9**9**9`` cannot pin a CPU.
+It applies Python's own operator functions, so results match Python. Every
+integer value it produces, intermediate results included, must fit in
+MAX_INT_BITS. A power whose size lower bound already exceeds that is refused
+before it is computed. Any other result is checked right after its operation;
+the operands are already bounded, so one operation builds at most
+2 * MAX_INT_BITS bits before the refusal. ``9**9**9`` cannot pin a CPU.
 """
 from __future__ import annotations
 

@@ -166,8 +166,11 @@ python -I tests/test_command_centre_boundary.py
 ```
 
 N21 Sandbox evaluates its arithmetic AST whitelist without `eval()`. Every
-integer it builds is bounded to 4096 bits, so an expression such as `9**9**9`
-is refused as `bound exceeded` instead of running until the route's 12-second kill.
+integer value it produces, intermediate results included, must fit in 4096 bits.
+A power whose size lower bound already exceeds that is refused before it is
+computed; any other result is checked right after its operation, which builds at
+most 8192 bits. An expression such as `9**9**9` is therefore refused as
+`bound exceeded` instead of running until the route's 12-second kill.
 
 Set `XAI_API_KEY` on the application server to use the completion integration.
 The model is pinned to `grok-4.7` (`DEFAULT_GROK_MODEL` in
