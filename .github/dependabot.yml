@@ -54,8 +54,9 @@ updates:
           - "*"
 
   - package-ecosystem: "pip"
-    # scripts/hf-ownership-requirements.txt pins the workflow parser that
-    # hf-deploy.yml installs (--only-binary) for the read-only ownership verifier.
+    # scripts/hf-ownership-requirements.txt pins the workflow parser, with hashes,
+    # that hf-deploy.yml installs (--only-binary --require-hashes) for the
+    # read-only ownership verifier.
     directory: "/scripts"
     schedule:
       interval: "weekly"

@@ -69,7 +69,7 @@ jobs:
       - name: Install the pinned workflow parser
         run: >-
           python -I -m pip install --disable-pip-version-check --only-binary=:all:
-          -r source/scripts/hf-ownership-requirements.txt
+          --require-hashes -r source/scripts/hf-ownership-requirements.txt
       - name: Reject wrong targets, invalid metadata and local writers offline
         run: python -I source/scripts/test_hf_ownership.py
       - name: Verify blocked ownership evidence offline
