@@ -52,3 +52,21 @@ updates:
       docker:
         patterns:
           - "*"
+
+  - package-ecosystem: "pip"
+    # scripts/hf-ownership-requirements.txt pins the workflow parser, with hashes,
+    # that hf-deploy.yml installs (--only-binary --require-hashes) for the
+    # read-only ownership verifier.
+    directory: "/scripts"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "America/New_York"
+    labels:
+      - "dependencies"
+    open-pull-requests-limit: 5
+    groups:
+      pip:
+        patterns:
+          - "*"

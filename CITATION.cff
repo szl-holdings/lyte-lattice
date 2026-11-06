@@ -1,9 +1,7 @@
 cff-version: 1.2.0
 message: If you use this software, please cite it using the metadata from this file.
 type: software
-title: szl-holdings/lyte-lattice — BIND hologram for named frontiers N1–N25
-version: 0.1.0
-date-released: '2026-11-05'
+title: szl-holdings/lyte-lattice — BIND hologram for named frontiers N1–N27
 license: Apache-2.0
 url: https://a-11-oy.com/lyte
 repository-code: https://github.com/szl-holdings/lyte-lattice

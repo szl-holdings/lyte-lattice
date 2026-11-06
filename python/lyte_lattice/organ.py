@@ -211,7 +211,7 @@ CELLS: dict[str, dict[str, str]] = {
         "id": "sandbox",
         "title": "Sandbox",
         "cited": "Daytona / E2B",
-        "job": "Restricted arithmetic/expression exec with ast whitelist and timeout.",
+        "job": "Restricted arithmetic/expression exec: AST whitelist, no eval, integers bounded to 4096 bits.",
         "not": "Not Daytona. Not E2B. Not a cloud VM. No shell, no import, no network.",
         "honesty": "LIVE",
         "module": "lyte_lattice.organs.n21_sandbox",
