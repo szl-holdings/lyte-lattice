@@ -14,7 +14,8 @@
     "@typescript-eslint/typescript-estree@8.72.1": {
       "minimatch": "11.0.3"
     },
-    "eslint@^10.13.0": {
+    "eslint": {
+      ".": "$eslint",
       "minimatch": "11.0.3"
     }
   },
