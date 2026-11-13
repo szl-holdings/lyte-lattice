@@ -7,20 +7,18 @@
  * `https://*.grok-sandbox.com/api/auth/callback/*`.
  * `app-builder-deployer/auth/src/preview-oauth.ts` was written for the previous
  * `oauth2/callback` allowlist; live admission of the 1.7 callback is not proven
- * here. Baking the preview client here lets
- * the live preview do REAL sign-in — no demo/mock users — with no platform
- * injection. When deployed the deployer injects a per-app
- * `GROK_AUTH_*` that overrides these (see `server.ts`).
+ * here. The preview client id is listed here. The client secret must come from
+ * `GROK_AUTH_CLIENT_SECRET` in the environment and is never baked into the
+ * source. When deployed the deployer injects a per-app `GROK_AUTH_*`
+ * (see `server.ts`).
  *
- * These MUST equal the broker's `GROK_PREVIEW_CLIENT_ID` /
- * `GROK_PREVIEW_CLIENT_SECRET` (set in the broker's Vercel env; the broker stores
- * only the secret's `base64url(SHA-256)` hash). This is a dedicated, low-privilege
- * client (preview-only, `*.grok-sandbox.com`) — rotate it by regenerating the
- * broker env var and this constant together.
+ * The preview client id is `grok_preview`. The matching client secret must
+ * be provided as `GROK_AUTH_CLIENT_SECRET` in the environment (the broker
+ * stores only the secret's `base64url(SHA-256)` hash). This is a dedicated,
+ * low-privilege client (preview-only, `*.grok-sandbox.com`). Rotate it by
+ * regenerating the broker env var and updating every consumer's environment.
  */
 export const PREVIEW_CLIENT_ID = "grok_preview";
-export const PREVIEW_CLIENT_SECRET =
-  "8bcdb7fc5a33874ad933ca568918d5790388a0795e44c4d1dea691f801b17ec5";
 
 /** The shared auth broker issuer (OIDC discovery lives under it). */
 export const GROK_ISSUER_DEFAULT = "https://auth.grok.me";
