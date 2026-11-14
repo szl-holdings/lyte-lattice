@@ -14,9 +14,10 @@
  * Tri-mode:
  *   - Deployed: the deployer injects a per-app `GROK_AUTH_*` + `BETTER_AUTH_URL`
  *     + `DATABASE_URL`, so real federated auth is persisted in Postgres.
- *   - Sandbox live preview: no injection -> falls back to the shared **preview
- *     client** (`./preview`) and derives the preview's `https://*.grok-sandbox.com`
- *     origin from the request, so real sign-in works (no demo users). Sessions
+ *   - Sandbox live preview: with `GROK_AUTH_CLIENT_SECRET` injected, uses the
+ *     shared **preview client** (`./preview`) and derives the preview's
+ *     `https://*.grok-sandbox.com` origin from the request. Missing credentials
+ *     refuse authentication rather than creating a dev user. Sessions
  *     and identities persist in the embedded PGLite DB (same DB as app data);
  *     the process restart wipes both. Live-preview iframe clients use a bearer
  *     token (partitioned cookies) — see `client.ts`.
@@ -83,6 +84,9 @@ const grokClientSecret = env("GROK_AUTH_CLIENT_SECRET");
 /** True when federated sign-in is active (real auth is enforced). */
 export const authConfigured =
   !authDisabled && Boolean(grokClientId && grokClientSecret);
+
+/** True when auth is expected but its runtime credentials are missing. */
+export const authConfigurationMissing = !authDisabled && !authConfigured;
 
 // This app's own Better Auth origin. When deployed the deployer injects the
 // public URL. In the sandbox live preview there's no fixed URL (each preview gets
