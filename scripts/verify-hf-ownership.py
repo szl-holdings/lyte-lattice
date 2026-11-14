@@ -6,6 +6,7 @@ import argparse
 import ast
 import hashlib
 import json
+import os
 import posixpath
 import os
 import re
