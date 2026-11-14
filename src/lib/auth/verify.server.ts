@@ -1,6 +1,6 @@
 import { getRequest } from "@tanstack/react-start/server";
 import { gateIdentityEnabled } from "./gate-identity.server";
-import { auth, authConfigured } from "./server";
+import { auth, authConfigured, authConfigurationMissing } from "./server";
 
 /**
  * Server-side session resolution (server-only).
@@ -20,9 +20,12 @@ export { authConfigured };
 
 if (databaseConfigured && !authConfigured) {
   console.error(
-    "[auth] DATABASE_URL is set but auth is disabled (VITE_AUTH_ENABLED=false) " +
-      "— requireUserId() will reject every request (fail closed) rather than " +
-      "share one dev user on a real database.",
+    authConfigurationMissing
+      ? "[auth] GROK_AUTH_CLIENT_SECRET is missing while auth is enabled — " +
+        "requireUserId() will reject requests (fail closed)."
+      : "[auth] DATABASE_URL is set but auth is disabled (VITE_AUTH_ENABLED=false) " +
+        "— requireUserId() will reject every request (fail closed) rather than " +
+        "share one dev user on a real database.",
   );
 }
 
@@ -82,6 +85,12 @@ export async function getSessionUser(
  * - Auth disabled + no database -> the shared dev user id.
  */
 export async function requireUserId(bearerToken?: string): Promise<string> {
+  if (authConfigurationMissing && !gateIdentityEnabled()) {
+    throw new Error(
+      "Auth is enabled but GROK_AUTH_CLIENT_SECRET is missing — " +
+        "refusing to fall back to the shared dev user.",
+    );
+  }
   if (!authConfigured && !gateIdentityEnabled()) {
     if (databaseConfigured) {
       throw new Error(
