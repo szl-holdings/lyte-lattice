@@ -1099,7 +1099,7 @@ class ReviewedSourceAdmission(unittest.TestCase):
         self.assertEqual(owner.REVIEWED_PUBLISHER_COMMIT,
                          '06fecb6a836d5c10d04e638ab91df4e6db79ce52')
         self.assertEqual(owner.DYNAMIC_DEPENDENCY_BLOBS[owner.WORKFLOW_PATH],
-                         '1f0b9f80893f1df021870df3608c424a40df96ab')
+                         'f091a186c46ccb1db48803862a5167c78d685265')
         self.assertEqual(len(owner.DYNAMIC_DEPENDENCY_BLOBS) + 2, 23)
         self.assertEqual(owner.SOURCE_REQUIRED_CHECKS, REQUIRED_CHECKS)
 

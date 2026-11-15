@@ -43,7 +43,7 @@ DYNAMIC_ENTRYPOINT_BLOB = '199cd4d30e86c6b0e01aeb7818803bb7d68d6a70'
 # the Lyte publisher, then the combined vertical-services publisher. Bind that
 # whole route, plus the workflow job's own source, plan and completion gates.
 DYNAMIC_DEPENDENCY_BLOBS = {
-    WORKFLOW_PATH: '1f0b9f80893f1df021870df3608c424a40df96ab',
+    WORKFLOW_PATH: 'f091a186c46ccb1db48803862a5167c78d685265',
     'scripts/szl_release_guard.py': 'f6c7bc02df02076388be5fa0b6949d8929cc2ba2',
     'scripts/lyte_enterprise_live_contract.py': '494116f65b24ea5b8a516abde31668be2248cbf4',
     'scripts/hf_existing_space_guard.py': 'ebab5d507ba589bb64d01a45bf32a03c2b52cb45',
