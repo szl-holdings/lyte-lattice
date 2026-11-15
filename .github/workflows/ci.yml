@@ -8,19 +8,22 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: ["20", "22"]
+        node-version: ["22", "24"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
       - run: npm ci
       - name: Typecheck application contracts
-        if: matrix.node-version == '22'
         run: npm run typecheck
-      - name: Verify offline script, auth, connector, and completion contracts
+      - name: Lint source and offline contracts without warnings
         if: matrix.node-version == '22'
+        run: npm run lint -- --max-warnings 0
+      - name: Verify offline script, auth, connector, and completion contracts
         run: npm test
       - name: Build (vite, development mode — no database dependency)
         run: npm run build:dev
@@ -53,3 +56,7 @@ jobs:
       # `selftest` is not a gate: it exits 1 by design because N27 Train is blocked.
       - name: CLI contract (one JSON value, fail closed, unsigned, no fabricated joule)
         run: python -I tests/test_lyte_cli_contract.py
+      - name: Blocked Hub handoff names the lyte-services runtime
+        run: python -I tests/test_command_centre_boundary.py
+      - name: N21 sandbox matches Python and refuses unbounded integers quickly
+        run: python -I tests/test_n21_sandbox.py

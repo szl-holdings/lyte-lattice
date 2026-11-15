@@ -78,10 +78,11 @@ def publish() -> dict:
     return {
         "ok": False,
         "state": "BLOCKED",
-        "reason": "Protected publisher only. This script refuses a silent Hub write even with a token. Hand the tip to the central publisher and wait for exact commit readback.",
+        "reason": "Protected publisher only. This presentation package refuses a Hub write even with a token. Runtime bytes come from szl-holdings/lyte-services through szl-holdings/a11oy.",
         "space": "SZLHOLDINGS/lyte",
         "publisher": "szl-holdings/a11oy (.github/workflows/hf-sync.yml)",
-        "source": "szl-holdings/lyte-lattice",
+        "source": "szl-holdings/lyte-services",
+        "presentation_source": "szl-holdings/lyte-lattice",
     }
 
 

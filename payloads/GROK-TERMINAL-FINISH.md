@@ -9,7 +9,7 @@ Paste this file into Grok in the terminal. Build and finish. Do not invent.
 - Command Center: repo `szl-holdings/a11oy` · Space `SZLHOLDINGS/a11oy` · product `https://a-11-oy.com`
 - Proof: `https://a11oy.net`
 - Never: `a11oy.com`
-- Bind package: `szl-holdings/lyte-lattice` · Space twin `SZLHOLDINGS/lyte-lattice` if present
+- Bind package: `szl-holdings/lyte-lattice`. It is not the runtime source of `SZLHOLDINGS/lyte`. `SZLHOLDINGS/lyte-lattice` is absent and must not be recreated.
 - Plane that sealed N1–N27: Alloy State Fabric
 - Doctrine v11 LOCKED · Λ = Conjecture 1 · signer HASH-LINKED / UNSIGNED-honest
 - Hub write only from the protected publisher with a bound token and exact post-deploy readback
@@ -62,23 +62,19 @@ Code these ten first. 122 repos exist; do not flatten the estate.
 
 For each lane: README honesty table, Apache-2.0, doctrine v11 badge, product ≠ proof, Hub is mirror.
 
-## Job 3 — Publish on Hugging Face SZLHOLDINGS
-
-Only with `HF_TOKEN` in the terminal environment.
+## Job 3 — Do not publish this package to the Hub
 
 ```bash
 python3 scripts/command_centre_payload.py --check
-# then, if token present and origin tip is exact:
 python3 scripts/command_centre_payload.py --publish-space
 ```
 
-`--publish-space` must:
+`--publish-space` must refuse. A missing token is `UNAVAILABLE`. A present token is still `BLOCKED`. This script never prints `RUNNING` and never writes the Hub.
 
-- Push `szl-holdings/lyte-lattice` Dockerfile-derived Space to `SZLHOLDINGS/lyte-lattice`
-- Set README YAML `short_description` to the honesty line already on origin
-- Wait for Hub readback of exact commit
-- Only then print `RUNNING`
-- If token missing: print `UNAVAILABLE` and stop. Do not mock the Space.
+- Runtime source: `szl-holdings/lyte-services`
+- Presentation package: `szl-holdings/lyte-lattice`
+- Canonical Space: `SZLHOLDINGS/lyte`, written only by `szl-holdings/a11oy`
+- `SZLHOLDINGS/lyte-lattice` is absent and must not be recreated
 
 Also verify listings:
 
@@ -99,6 +95,6 @@ Also verify listings:
 
 - `/lyte` tab visible on Command Center and a-11-oy.com/lyte
 - W1 W2 W3 board shows origin hashes
-- Space `SZLHOLDINGS/lyte-lattice` RUNNING only after readback
+- Do not require `SZLHOLDINGS/lyte-lattice` to be RUNNING. This package does not publish it.
 - Ten lanes have current honesty READMEs
 - No fabricated train, joule, or certificate

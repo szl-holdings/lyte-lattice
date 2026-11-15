@@ -1,47 +1,66 @@
 # Canonical Lyte publisher source admission
 
 The presentation package's read-only ownership verifier admits exact Git blobs
-from `szl-holdings/a11oy`. The complete 23-file closure below was reviewed at
-verified commit `deb1aa4f24252747b72edfe77905fe7567d11716` on 2026-11-02 UTC
-(November 1 Eastern). It supersedes the admission at
-`58a0e102e8ebc0b35af86be3ec2de3b6c4e41d66`: four blobs changed, 19 are unchanged,
+from `szl-holdings/a11oy`. The complete 23-file closure below received agent
+source review at verified commit `06fecb6a836d5c10d04e638ab91df4e6db79ce52`
+on 2026-11-05 UTC. It supersedes the admission at
+`d3aee5e86b57def71addc04c0510a7b23c752cff`: only the bound workflow blob changed,
+from `2bd1510285ad7d40dc2af3f11420de927438b329` to
+`1f0b9f80893f1df021870df3608c424a40df96ab`. The other 22 files are unchanged
 and no executable dependency was added or removed. The closure analyzer,
-exact-byte rejection rules, and source-evidence gates are unchanged.
+exact-byte rejection rules and source-evidence gates are unchanged. This
+records agent source review of those bytes, not a GitHub review approval,
+human-owner approval, independent execution, or production authorization.
 
 ## Changes reviewed for this admission
 
-- **Selected workflow job.** `publish-vertical-flagships` retains the same four
-  executable roots, default estate route, targets, credential variables,
-  exact-main and explicit vertical-plan gates. Only its pinned setup-python
-  and harden-runner action revisions changed. Third-party action internals
-  remain outside this source-delegation closure.
-- **Other workflow jobs.** The bound workflow also adds the separate
-  independently approved execution-handoff path, updates the canonical deploy
-  reusable workflow and attestation permissions, and wires readiness/relock
-  to that handoff. Those jobs are not executed by this presentation verifier
-  and are not certified by this selected-route admission. No runtime execution
-  approval, provider credential, or production authorization is granted here.
-- **Repair-plan helper.** Maintenance-window forwarding is a new optional
-  input, defaulting false. The selected vertical-plan invocation supplies no
-  such flag: it still validates the exact source and approved vertical plan,
-  emits decision data only, and does not dispatch a workflow or write a provider.
-- **Completion helper.** Optional maintenance-window forwarding and clearer
-  closed-window diagnostics affect its imported dispatch API. The selected
-  job invokes the unchanged no-argument `main`, which requires successful
-  publication and verifies the existing v4 source/run-bound receipt. A skipped
-  or failed publication still fails; diagnostics never authorize a write.
-- **Generated runtime requirements.** The sole requirement change is
-  `certifi==2026.7.22` to `certifi==2026.10.19`. This records the emitted
-  dependency pin, not an installation, dependency security audit, or runtime
-  qualification. Publisher, entrypoint, release guard, Lyte live contract,
-  existing-Space guard, exact-main gate and both controller pins are unchanged.
+The diff of `.github/workflows/hf-sync.yml` against the previous admitted blob
+is two hunks. No Lyte publisher, entrypoint, sibling publisher, publication
+target, scope, permission, secret, or Space visibility changes.
 
-Validation used the exact 23 files from the reviewed commit: the previous
-registry rejected the workflow blob; the updated registry derives the same
-complete closure and rejects mutations of each of the four changed files.
-The existing 65 offline authority tests remain required. The fixture evidence
-and static closure check do not execute publisher code, install provider SDKs,
-contact Hugging Face, or establish that backend checks currently pass.
+- **Canonical A11oy preflight.** In `preflight`, "Require an open deploy
+  window while SQLite lives on the bucket mount" no longer warns and continues
+  when the window is closed. A `PAUSED` stage or an explicit
+  `open_deploy_window` dispatch still sets `open=true`. Otherwise, when the
+  stage is `RUNNING`, the step reads `$CANONICAL_ORIGIN/api/build-info`
+  (`https://szlholdings-a11oy.hf.space`, Space `SZLHOLDINGS/a11oy`) and sets
+  `open=false` only if `build.revision` equals `GITHUB_SHA`. Every other
+  closed-window state exits 1 with
+  `PUBLICATION_BLOCKED_DEPLOY_WINDOW_CLOSED`. This is the canonical A11oy
+  Space job, not the Lyte publisher. The hunk arrived in a11oy #3221
+  (`bb950a8b65b8633a5ada713c6bc250c40a79c31b`), whose GitHub review list is
+  empty. That commit's workflow blob was
+  `d9a115a3f9d14e9a4129bfd3016663dcce2d488f`.
+- **Flagship job action pin.** `publish-vertical-flagships` changes one
+  action pin: `step-security/harden-runner` from
+  `dc2769abcc0fcfbadfc1df54081c1608579ef6b2` (v2.22.2) to
+  `46b06cea07f9e64621fdf066ba77ac6915163d43` (v2.22.3), still
+  `egress-policy: audit`. The job condition, needs, concurrency, secrets, and
+  publisher command are unchanged. The hunk arrived in a11oy #3166
+  (`d0226bb82b38255bc58131a8436fd4196e320402`), a Dependabot merge whose
+  GitHub review list is empty. That commit is where blob
+  `1f0b9f80893f1df021870df3608c424a40df96ab` first appears. The same blob is
+  still the file on `06fecb6a`.
+
+## Previous admission
+
+Commit `d3aee5e86b57def71addc04c0510a7b23c752cff` (2026-11-03 UTC) admitted
+workflow blob `2bd1510285ad7d40dc2af3f11420de927438b329` and superseded
+`deb1aa4f24252747b72edfe77905fe7567d11716`. That review is not reopened. Its
+workflow delta was inside `execution-handoff`: failure outputs through
+`GITHUB_OUTPUT`, a separate failure-receipt path, and split success and
+blocked artifacts. `publish-vertical-flagships` was byte-identical in that
+delta. The handoff helper blob `d7c7a15df68c73f6c264948e43ef3035feb92315` and
+collector blob `85246d7d9b1b6057c5141889944f9a4c19b50fd8` stay outside this
+closure.
+
+Validation used the exact 23 files from `06fecb6a`. The previous registry
+rejected the workflow blob; the updated registry derives the same complete
+closure and rejects mutations of all 23 files, including an unknown workflow.
+Offline authority and failure-receipt regressions remain required. The
+fixture evidence and static closure check do not execute publisher code,
+install provider SDKs, contact Hugging Face, or establish that backend
+checks currently pass.
 
 ## Admitted scope: the default estate route, not Lyte alone
 
@@ -64,7 +83,7 @@ Lyte and fails closed. So does any non-literal scope value.
 
 | Path | Git blob | Role |
 | --- | --- | --- |
-| `.github/workflows/hf-sync.yml` | `44d16fd595c83dede79cbb4f7b1c8b0512861f01` | Workflow; job invokes the entrypoint with the default scope |
+| `.github/workflows/hf-sync.yml` | `1f0b9f80893f1df021870df3608c424a40df96ab` | Workflow; job invokes the entrypoint with the default scope |
 | `scripts/hf_publish_vertical_flagships_v4.py` | `199cd4d30e86c6b0e01aeb7818803bb7d68d6a70` | Entrypoint and scope dispatch |
 | `scripts/hf_publish_lyte_enterprise.py` | `7c533d753a2b913a77bb71074f04aa5b753b0392` | Lyte publisher (`SZLHOLDINGS/lyte`) |
 | `scripts/szl_release_guard.py` | `f6c7bc02df02076388be5fa0b6949d8929cc2ba2` | Lyte release primitive |

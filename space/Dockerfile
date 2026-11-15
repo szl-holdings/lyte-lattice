@@ -1,10 +1,9 @@
 # Hugging Face Space — Python hologram. No npm ci.
 # Flatten-compatible: Hub payload is Dockerfile + server.py + index.html + README + LICENSE.
-# Base: python:3.12-slim through mirror.gcr.io, pinned to the multi-arch OCI image-index
-# digest that mirror.gcr.io and registry-1.docker.io both returned for that tag on
-# 2026-09-29 (3.12.14-slim-trixie; includes linux/amd64). Dependabot (docker, /space) moves the
-# tag and the digest together.
-FROM mirror.gcr.io/library/python:3.15-slim@sha256:533b0b2f9b5d46fd097091cf826f27902f1d6c3bca714b6dc74551356aa97a51
+# Base: python:3.15-slim through mirror.gcr.io, pinned to a multi-arch OCI image-index
+# digest (3.15.2-slim-trixie; includes linux/amd64; index re-read from mirror.gcr.io on
+# 2026-11-06). Dependabot (docker, /space) moves the tag and the digest together.
+FROM mirror.gcr.io/library/python:3.15-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PORT=7860
 COPY server.py ./server.py

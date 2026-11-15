@@ -36,7 +36,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Harden runner
-        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a
         with:
           egress-policy: audit
       - name: Checkout exact presentation source
@@ -69,12 +69,14 @@ jobs:
       - name: Install the pinned workflow parser
         run: >-
           python -I -m pip install --disable-pip-version-check --only-binary=:all:
-          -r source/scripts/hf-ownership-requirements.txt
+          --require-hashes -r source/scripts/hf-ownership-requirements.txt
       - name: Reject wrong targets, invalid metadata and local writers offline
         run: python -I source/scripts/test_hf_ownership.py
       - name: Verify blocked ownership evidence offline
         run: python -I source/scripts/test_hf_failure_evidence.py
       - name: Verify actual ownership and record the exact inspected commits
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: >-
           python -I source/scripts/verify-hf-ownership.py
           --source source --governance governance --publisher publisher

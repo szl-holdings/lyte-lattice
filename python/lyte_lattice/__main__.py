@@ -32,11 +32,11 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p_act = sub.add_parser("act", help="run one organ")
-    p_act.add_argument("--cell", required=True, help="N1–N25 or id (serve, title, energy, …)")
+    p_act.add_argument("--cell", required=True, help="N1–N27 or id (serve, title, energy, …)")
     p_act.add_argument("--payload", default="{}", help="JSON object")
 
     sub.add_parser("list", help="list organs and load status")
-    sub.add_parser("selftest", help="act every N1–N25 with empty payload")
+    sub.add_parser("selftest", help="act every N1–N27 with empty payload")
 
     args = parser.parse_args(argv)
 

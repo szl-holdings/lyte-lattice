@@ -75,7 +75,7 @@ test("actual child processes execute both suites from paths containing spaces", 
   }), 0);
   assert.equal(results.length, 2);
   assert.match(results[0].stdout, /# tests 1\b/);
-  assert.match(results[1].stdout, /# tests 4\b/);
+  assert.match(results[1].stdout, new RegExp(`# tests ${TYPESCRIPT_TESTS.length}\\b`));
 });
 
 test("a failing script test returns nonzero and stops the second suite", (t) => {

@@ -18,6 +18,17 @@ tags:
   - szl-holdings
 ---
 
+<!-- szl:header v1 -->
+[![org: szl-holdings](https://img.shields.io/badge/org-szl--holdings-black)](https://github.com/szl-holdings)
+[![doctrine](https://img.shields.io/badge/doctrine-control%20before%20action%20%C2%B7%20evidence%20after-blue)](https://a-11-oy.com)
+
+**Control before action. Evidence after.**
+
+Part of the [szl-holdings](https://github.com/szl-holdings) estate ·
+Product: [a-11-oy.com](https://a-11-oy.com) ·
+Proof: [a11oy.net](https://a11oy.net)
+<!-- /szl:header -->
+
 <!-- Native identity: szl-brand@4309f6fce89179331b0b3ed8c99494e76c5be256; Orbit v2 icon sha256 6e2b7d72a3af3d9602b79de41df0194ede6496a9661f057108ec224c0efc92e6. -->
 <!-- Surface Foundry: szl-brand@b519affbd63447c086cb74b6e0636661bcac09a6; input README.surface.json; receipt README.surface-receipt.json. Generation metadata is not live runtime evidence. -->
 <p><a href="https://github.com/szl-holdings"><img src="https://raw.githubusercontent.com/szl-holdings/szl-brand/4309f6fce89179331b0b3ed8c99494e76c5be256/kit/logos/orbit-v2/suite/szl-icon-32.svg" alt="SZL Holdings — Orbit v2" width="32" height="32" /></a></p>
@@ -110,15 +121,22 @@ Owner order `AO-2026-08-29-001` admits this as an A11oy package, not a second fl
 
 ## Develop
 
+Use Node.js 22.13 or later in the 22.x line, or Node.js 24 or later. The locked
+TanStack Start packages require Node 22.12+, and ESLint 10 raises the development
+minimum to 22.13 while excluding Node 23. `package.json` declares this shared
+contract and `.npmrc` enforces dependency engines during installation.
+
 ```bash
 npm ci
 npm run dev
 # Compile the presentation without a database migration:
 npm run build:dev
-# Complete offline regression suite (Node 22.6+):
+# Complete offline regression suite:
 npm test
-# Offline authority regression tests:
-python scripts/test_hf_ownership.py
+# Offline authority regression tests (they need the pinned PyYAML parser):
+python -m pip install -r scripts/hf-ownership-requirements.txt
+python -I scripts/test_hf_ownership.py
+python -I scripts/test_hf_failure_evidence.py
 ```
 
 Optional completion integrations use server-side configuration. An absent key
@@ -127,9 +145,32 @@ source, browser bundles, and evidence receipts.
 
 `npm test` discovers script tests without shell globs and also runs the auth,
 connector, completion-request and streaming suites. Missing suites and child
-process failures fail the command. CI runs this complete suite on Node 22;
-the build matrix remains Node 20 and 22. Brand asset maintenance is documented
-in [docs/brand-assets.md](docs/brand-assets.md).
+process failures fail the command. CI installs with engine checks enforced,
+typechecks, and runs the complete suite and development build on Node 22 and 24.
+The Node 22 job also requires source and contract lint to pass without warnings.
+A separate Python 3.12 job compiles every tracked Python file, checks the shared
+`scripts/` template against `template.lock.json`, and runs the organ tests below;
+the authority tests run in the read-only ownership workflow (`hf-deploy.yml`).
+Brand asset maintenance is documented in [docs/brand-assets.md](docs/brand-assets.md).
+
+The N1–N27 organs that `/api/act` spawns are standard-library Python in
+`python/lyte_lattice`. Each call prints one UNSIGNED-honest JSON receipt; the
+organs and their offline tests need no network, credentials or extra packages:
+
+```bash
+cd python && python -m lyte_lattice list
+python -m lyte_lattice act --cell N21 --payload '{"code": "2 ** 10"}'
+cd .. && python -I tests/test_lyte_cli_contract.py
+python -I tests/test_n21_sandbox.py
+python -I tests/test_command_centre_boundary.py
+```
+
+N21 Sandbox evaluates its arithmetic AST whitelist without `eval()`. Every
+integer value it produces, intermediate results included, must fit in 4096 bits.
+A power whose size lower bound already exceeds that is refused before it is
+computed; any other result is checked right after its operation, which builds at
+most 8192 bits. An expression such as `9**9**9` is therefore refused as
+`bound exceeded` instead of running until the route's 12-second kill.
 
 Set `XAI_API_KEY` on the application server to use the completion integration.
 The model is pinned to `grok-4.7` (`DEFAULT_GROK_MODEL` in

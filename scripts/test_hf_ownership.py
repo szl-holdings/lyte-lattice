@@ -111,9 +111,25 @@ class OwnershipContract(unittest.TestCase):
                      '---\nshort_description: ""\n---\n',
                      '---\nshort_description: ' + 'x' * 61 + '\n---\n',
                      '---\nshort_description: key: unquoted\n---\n',
-                     '---\nshort_description: first\nshort_description: second\n---\n'):
+                     '---\nshort_description: first\nshort_description: second\n---\n',
+                     '<!-- szl:header v1 -->\n\n---\nshort_description: "Lyte package: canonical runtime"\n---\n'):
             with self.subTest(text=text), self.assertRaises(owner.ContractError):
                 owner.validate_card(text)
+    def test_repository_readme_starts_with_hub_yaml_before_estate_header(self):
+        """The checked-in card is the contract, not a synthetic stand-in.
+
+        Run 41855292921 failed after offline fixtures passed: squash merge of
+        #72 left ``<!-- szl:header v1 -->`` ahead of otherwise valid Hub YAML.
+        """
+        readme = Path(__file__).resolve().parents[1].joinpath('README.md').read_text(encoding='utf-8')
+        self.assertTrue(readme.startswith('---\n'), 'README must start with Hub YAML metadata')
+        owner.validate_card(readme)
+        header = readme.find('<!-- szl:header v1 -->')
+        closing = readme.find('\n---\n', 4)
+        self.assertGreater(header, closing)
+        prefixed = '<!-- szl:header v1 -->\n\n' + readme
+        with self.assertRaisesRegex(owner.ContractError, 'README must start with Hub YAML metadata'):
+            owner.validate_card(prefixed)
     def test_local_secrets_and_provider_writes_remain_forbidden(self):
         for addition in ('\nenv:\n  HF_TOKEN: not-a-token\n',
                          '\njobs:\n  permissions:\n    contents: write\n',
@@ -1076,6 +1092,27 @@ class DynamicOwnershipContract(OwnershipContract):
         self.assertEqual(production, {EXPECTED_PUBLISHER: owner.DYNAMIC_PUBLISHER_BLOB,
                                       EXPECTED_ENTRYPOINT: owner.DYNAMIC_ENTRYPOINT_BLOB,
                                       **owner.DYNAMIC_DEPENDENCY_BLOBS})
+
+
+class ReviewedSourceAdmission(unittest.TestCase):
+    def test_reviewed_commit_and_whole_workflow_identity_are_explicit(self):
+        self.assertEqual(owner.REVIEWED_PUBLISHER_COMMIT,
+                         '06fecb6a836d5c10d04e638ab91df4e6db79ce52')
+        self.assertEqual(owner.DYNAMIC_DEPENDENCY_BLOBS[owner.WORKFLOW_PATH],
+                         '1f0b9f80893f1df021870df3608c424a40df96ab')
+        self.assertEqual(len(owner.DYNAMIC_DEPENDENCY_BLOBS) + 2, 23)
+        self.assertEqual(owner.SOURCE_REQUIRED_CHECKS, REQUIRED_CHECKS)
+
+    def test_admission_document_matches_every_reviewed_source_identity(self):
+        document = (Path(__file__).resolve().parents[1] /
+                    'docs/lyte-publisher-admission.md').read_text(encoding='utf-8')
+        self.assertIn(owner.REVIEWED_PUBLISHER_COMMIT, document)
+        registry = {owner.PUBLISHER_PATH: owner.DYNAMIC_PUBLISHER_BLOB,
+                    owner.ENTRYPOINT_PATH: owner.DYNAMIC_ENTRYPOINT_BLOB,
+                    **owner.DYNAMIC_DEPENDENCY_BLOBS}
+        for path, blob in registry.items():
+            with self.subTest(path=path):
+                self.assertIn(f'| `{path}` | `{blob}` |', document)
 
 
 class PublisherIsolation(unittest.TestCase):
