@@ -6,7 +6,7 @@ source review at verified commit `06fecb6a836d5c10d04e638ab91df4e6db79ce52`
 on 2026-11-05 UTC. It supersedes the admission at
 `d3aee5e86b57def71addc04c0510a7b23c752cff`: only the bound workflow blob changed,
 from `2bd1510285ad7d40dc2af3f11420de927438b329` to
-`1f0b9f80893f1df021870df3608c424a40df96ab`. The other 22 files are unchanged
+`f091a186c46ccb1db48803862a5167c78d685265`. The other 22 files are unchanged
 and no executable dependency was added or removed. The closure analyzer,
 exact-byte rejection rules and source-evidence gates are unchanged. This
 records agent source review of those bytes, not a GitHub review approval,
@@ -83,7 +83,7 @@ Lyte and fails closed. So does any non-literal scope value.
 
 | Path | Git blob | Role |
 | --- | --- | --- |
-| `.github/workflows/hf-sync.yml` | `1f0b9f80893f1df021870df3608c424a40df96ab` | Workflow; job invokes the entrypoint with the default scope |
+| `.github/workflows/hf-sync.yml` | `f091a186c46ccb1db48803862a5167c78d685265` | Workflow; job invokes the entrypoint with the default scope |
 | `scripts/hf_publish_vertical_flagships_v4.py` | `199cd4d30e86c6b0e01aeb7818803bb7d68d6a70` | Entrypoint and scope dispatch |
 | `scripts/hf_publish_lyte_enterprise.py` | `7c533d753a2b913a77bb71074f04aa5b753b0392` | Lyte publisher (`SZLHOLDINGS/lyte`) |
 | `scripts/szl_release_guard.py` | `f6c7bc02df02076388be5fa0b6949d8929cc2ba2` | Lyte release primitive |
