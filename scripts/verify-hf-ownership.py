@@ -32,7 +32,7 @@ SOURCE_REQUIRED_CHECKS = (
 # publisher, its 17 source gates and both pinned controllers are unchanged.
 # Admission scope and reviewed identities: docs/lyte-publisher-admission.md.
 # A new publisher, entrypoint, route or closure file requires a separate review.
-REVIEWED_PUBLISHER_COMMIT = '06fecb6a836d5c10d04e638ab91df4e6db79ce52'
+REVIEWED_PUBLISHER_COMMIT = '0797ad096736b77bd45330ca5ebe0f14e82875ec'
 PUBLISHER_PATH = 'scripts/hf_publish_lyte_enterprise.py'
 ENTRYPOINT_PATH = 'scripts/hf_publish_vertical_flagships_v4.py'
 WORKFLOW_PATH = '.github/workflows/hf-sync.yml'
@@ -43,7 +43,7 @@ DYNAMIC_ENTRYPOINT_BLOB = '199cd4d30e86c6b0e01aeb7818803bb7d68d6a70'
 # the Lyte publisher, then the combined vertical-services publisher. Bind that
 # whole route, plus the workflow job's own source, plan and completion gates.
 DYNAMIC_DEPENDENCY_BLOBS = {
-    WORKFLOW_PATH: 'f091a186c46ccb1db48803862a5167c78d685265',
+    WORKFLOW_PATH: 'a30d6ca31f69fe58816180888ea53b12ce6380b8',
     'scripts/szl_release_guard.py': 'f6c7bc02df02076388be5fa0b6949d8929cc2ba2',
     'scripts/lyte_enterprise_live_contract.py': '494116f65b24ea5b8a516abde31668be2248cbf4',
     'scripts/hf_existing_space_guard.py': 'ebab5d507ba589bb64d01a45bf32a03c2b52cb45',
@@ -64,7 +64,7 @@ DYNAMIC_DEPENDENCY_BLOBS = {
     'scripts/hf_vertical_native_presentation.py': 'a4a1b1dc0598b08438770e8771709521b28cddbb',
     'scripts/hf_sentra_upstream.py': '11e799ca6c8feb270888209188088a7f86c44fe3',
     # Combined vertical-services route, run after Lyte in the same process.
-    'scripts/hf_publish_vertical_services_intelligence_v4.py': 'c4191e7f6139ad934fe9c8809174476934b2eb59',
+    'scripts/hf_publish_vertical_services_intelligence_v4.py': '1b70e6fdb96f71613a1fb49cbb71c274d3c68f31',
     'scripts/hf_publish_vertical_services_frontier_v3.py': '69b19505d307f22faeee49a98d11c97a58abd603',
     'scripts/hf_publish_vertical_services.py': '3f51f74299235e99d3a1fce3b1eae3163014beba',
 }

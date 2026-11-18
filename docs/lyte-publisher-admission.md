@@ -2,17 +2,52 @@
 
 The presentation package's read-only ownership verifier admits exact Git blobs
 from `szl-holdings/a11oy`. The complete 23-file closure below received agent
-source review at verified commit `06fecb6a836d5c10d04e638ab91df4e6db79ce52`
-on 2026-11-05 UTC. It supersedes the admission at
-`d3aee5e86b57def71addc04c0510a7b23c752cff`: only the bound workflow blob changed,
-from `2bd1510285ad7d40dc2af3f11420de927438b329` to
-`f091a186c46ccb1db48803862a5167c78d685265`. The other 22 files are unchanged
-and no executable dependency was added or removed. The closure analyzer,
-exact-byte rejection rules and source-evidence gates are unchanged. This
-records agent source review of those bytes, not a GitHub review approval,
-human-owner approval, independent execution, or production authorization.
+source review at verified commit `0797ad096736b77bd45330ca5ebe0f14e82875ec`
+on 2026-11-18 UTC. It supersedes the admission at
+`06fecb6a836d5c10d04e638ab91df4e6db79ce52`: two bound blobs changed. The
+workflow moved from `f091a186c46ccb1db48803862a5167c78d685265` to
+`a30d6ca31f69fe58816180888ea53b12ce6380b8`, and the combined intelligence
+publisher moved from `c4191e7f6139ad934fe9c8809174476934b2eb59` to
+`1b70e6fdb96f71613a1fb49cbb71c274d3c68f31`. The other 21 files, including
+both dynamic blobs, are unchanged and no executable dependency was added or
+removed. The closure analyzer, exact-byte rejection rules and source-evidence
+gates are unchanged. This records agent source review of those bytes, not a
+GitHub review approval, human-owner approval, independent execution, or
+production authorization.
 
 ## Changes reviewed for this admission
+
+- **Workflow, canonical A11oy jobs only.** Every hunk of the
+  `f091a186` -> `a30d6ca3` diff is in `preflight` or `runtime-config`. Both
+  jobs gain longer timeouts (15 -> 50 and 20 -> 55 minutes), capture the
+  serving writer before each Series-A and GDW configuration write, wait for
+  the writer handover after it through
+  `.github/scripts/await_hf_configuration_handover.py`, and upload the four
+  extra reports. That helper runs only in those two jobs and stays outside
+  this closure. The `publish-vertical-flagships` job is byte-identical in both
+  blobs (124 lines), so no Lyte publisher, entrypoint, sibling publisher,
+  publication target, scope, permission, secret, or Space visibility changes.
+  The hunks arrived in a11oy #3608 (`b9d0d11`, blob `d77744da`) and #3626
+  (`0aba9e7`, blob `a30d6ca3`). Both GitHub review lists are empty.
+- **Combined intelligence publisher.** The `c4191e7f` -> `1b70e6fd` diff adds
+  the `khipu-governed-public` model alias (the same
+  `SZLHOLDINGS/SZL-Khipu-1.5B-GGUF` repository as `khipu-gguf-public`) and,
+  for the `lyte` vertical only, expects that alias in the profile models and
+  five profile tasks instead of four. These are read-only verification
+  expectations after publication; no write target, credential or Space
+  changes. The hunk arrived in a11oy #3651 (`3c8ee43`), whose GitHub review
+  list is empty.
+
+Validation re-ran `scripts/verify-hf-ownership.py` against a11oy
+`0797ad09` with the updated registry. The previous registry rejected the
+workflow blob (the failure on lyte-lattice main at `8e0f798`).
+
+## Previous admission
+
+Commit `06fecb6a836d5c10d04e638ab91df4e6db79ce52` (2026-11-05 UTC) admitted
+workflow blob `f091a186c46ccb1db48803862a5167c78d685265` and superseded
+`d3aee5e86b57def71addc04c0510a7b23c752cff`. That review is not reopened. Its
+reviewed changes were:
 
 The diff of `.github/workflows/hf-sync.yml` against the previous admitted blob
 is two hunks. No Lyte publisher, entrypoint, sibling publisher, publication
@@ -42,7 +77,15 @@ target, scope, permission, secret, or Space visibility changes.
   `1f0b9f80893f1df021870df3608c424a40df96ab` first appears. The same blob is
   still the file on `06fecb6a`.
 
-## Previous admission
+Validation used the exact 23 files from `06fecb6a`. The previous registry
+rejected the workflow blob; the updated registry derives the same complete
+closure and rejects mutations of all 23 files, including an unknown workflow.
+Offline authority and failure-receipt regressions remain required. The
+fixture evidence and static closure check do not execute publisher code,
+install provider SDKs, contact Hugging Face, or establish that backend
+checks currently pass.
+
+Earlier admission:
 
 Commit `d3aee5e86b57def71addc04c0510a7b23c752cff` (2026-11-03 UTC) admitted
 workflow blob `2bd1510285ad7d40dc2af3f11420de927438b329` and superseded
@@ -53,14 +96,6 @@ blocked artifacts. `publish-vertical-flagships` was byte-identical in that
 delta. The handoff helper blob `d7c7a15df68c73f6c264948e43ef3035feb92315` and
 collector blob `85246d7d9b1b6057c5141889944f9a4c19b50fd8` stay outside this
 closure.
-
-Validation used the exact 23 files from `06fecb6a`. The previous registry
-rejected the workflow blob; the updated registry derives the same complete
-closure and rejects mutations of all 23 files, including an unknown workflow.
-Offline authority and failure-receipt regressions remain required. The
-fixture evidence and static closure check do not execute publisher code,
-install provider SDKs, contact Hugging Face, or establish that backend
-checks currently pass.
 
 ## Admitted scope: the default estate route, not Lyte alone
 
@@ -83,7 +118,7 @@ Lyte and fails closed. So does any non-literal scope value.
 
 | Path | Git blob | Role |
 | --- | --- | --- |
-| `.github/workflows/hf-sync.yml` | `f091a186c46ccb1db48803862a5167c78d685265` | Workflow; job invokes the entrypoint with the default scope |
+| `.github/workflows/hf-sync.yml` | `a30d6ca31f69fe58816180888ea53b12ce6380b8` | Workflow; job invokes the entrypoint with the default scope |
 | `scripts/hf_publish_vertical_flagships_v4.py` | `199cd4d30e86c6b0e01aeb7818803bb7d68d6a70` | Entrypoint and scope dispatch |
 | `scripts/hf_publish_lyte_enterprise.py` | `7c533d753a2b913a77bb71074f04aa5b753b0392` | Lyte publisher (`SZLHOLDINGS/lyte`) |
 | `scripts/szl_release_guard.py` | `f6c7bc02df02076388be5fa0b6949d8929cc2ba2` | Lyte release primitive |
@@ -103,7 +138,7 @@ Lyte and fails closed. So does any non-literal scope value.
 | `scripts/hf_finance_projection_manifest.py` | `4d00c2d0b1005c4f23f37c810754bdeb7eff4453` | Finance manifest and immutable Hub readback |
 | `scripts/hf_vertical_native_presentation.py` | `a4a1b1dc0598b08438770e8771709521b28cddbb` | Source-owned presentation projection; no provider access |
 | `scripts/hf_sentra_upstream.py` | `11e799ca6c8feb270888209188088a7f86c44fe3` | Emitted Sentra observation budget and bounded cache |
-| `scripts/hf_publish_vertical_services_intelligence_v4.py` | `c4191e7f6139ad934fe9c8809174476934b2eb59` | Combined publisher, intelligence layer (runs after Lyte) |
+| `scripts/hf_publish_vertical_services_intelligence_v4.py` | `1b70e6fdb96f71613a1fb49cbb71c274d3c68f31` | Combined publisher, intelligence layer (runs after Lyte) |
 | `scripts/hf_publish_vertical_services_frontier_v3.py` | `69b19505d307f22faeee49a98d11c97a58abd603` | Combined publisher, frontier layer |
 | `scripts/hf_publish_vertical_services.py` | `3f51f74299235e99d3a1fce3b1eae3163014beba` | Combined writer (`SZLHOLDINGS/vertical-services`) |
 
