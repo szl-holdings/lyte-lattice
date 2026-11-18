@@ -2,20 +2,46 @@
 
 The presentation package's read-only ownership verifier admits exact Git blobs
 from `szl-holdings/a11oy`. The complete 23-file closure below received agent
-source review at verified commit `0797ad096736b77bd45330ca5ebe0f14e82875ec`
+source review at verified commit `382683add52d47abfd9e3f773e2e5373f9d383b7`
 on 2026-11-18 UTC. It supersedes the admission at
-`06fecb6a836d5c10d04e638ab91df4e6db79ce52`: two bound blobs changed. The
-workflow moved from `f091a186c46ccb1db48803862a5167c78d685265` to
-`a30d6ca31f69fe58816180888ea53b12ce6380b8`, and the combined intelligence
-publisher moved from `c4191e7f6139ad934fe9c8809174476934b2eb59` to
-`1b70e6fdb96f71613a1fb49cbb71c274d3c68f31`. The other 21 files, including
-both dynamic blobs, are unchanged and no executable dependency was added or
+`0797ad096736b77bd45330ca5ebe0f14e82875ec`: only the bound workflow blob changed,
+from `a30d6ca31f69fe58816180888ea53b12ce6380b8` to
+`b7c70df2948bee1b9a37ebe36ea90b3452a4a212`. The other 22 files, including both
+dynamic blobs, are unchanged and no executable dependency was added or
 removed. The closure analyzer, exact-byte rejection rules and source-evidence
 gates are unchanged. This records agent source review of those bytes, not a
 GitHub review approval, human-owner approval, independent execution, or
 production authorization.
 
 ## Changes reviewed for this admission
+
+- **Canonical A11oy preflight deploy window.** Every hunk of the
+  `a30d6ca3` -> `b7c70df2` diff is in `preflight`. When the Space stage is
+  `RUNNING` and a live revision was read, the closed-window step now runs
+  `.github/scripts/await_hf_configuration_handover.py capture` and
+  `.github/scripts/admit_hf_fenced_runtime.py`, and continues only if that
+  admission of a CLEAN/FENCED writer succeeds; every other closed-window state
+  still exits 1 with `PUBLICATION_BLOCKED_DEPLOY_WINDOW_CLOSED`. The step's
+  comment is rewritten to match and the two admission reports are uploaded.
+  Both helpers run only in `preflight` and stay outside this closure. The
+  `publish-vertical-flagships` job is byte-identical in both blobs (124
+  lines), so no Lyte publisher, entrypoint, sibling publisher, publication
+  target, scope, permission, secret, or Space visibility changes. The hunk
+  arrived in a11oy #3685 (`382683a`), whose GitHub review list is empty.
+
+Validation re-ran the full closure comparison against a11oy `382683a`
+(23 files; only the workflow blob differed) and the offline ownership suites
+with the updated registry. The previous registry rejected the workflow blob
+(the failure on lyte-lattice main at `196b48d`, which landed seconds after
+#3685).
+
+## Previous admission
+
+Commit `0797ad096736b77bd45330ca5ebe0f14e82875ec` (2026-11-18 UTC) admitted
+workflow blob `a30d6ca31f69fe58816180888ea53b12ce6380b8` and combined intelligence
+publisher blob `1b70e6fdb96f71613a1fb49cbb71c274d3c68f31`, superseding
+`06fecb6a836d5c10d04e638ab91df4e6db79ce52`. That review is not reopened. Its
+reviewed changes were:
 
 - **Workflow, canonical A11oy jobs only.** Every hunk of the
   `f091a186` -> `a30d6ca3` diff is in `preflight` or `runtime-config`. Both
@@ -42,7 +68,7 @@ Validation re-ran `scripts/verify-hf-ownership.py` against a11oy
 `0797ad09` with the updated registry. The previous registry rejected the
 workflow blob (the failure on lyte-lattice main at `8e0f798`).
 
-## Previous admission
+Earlier admission:
 
 Commit `06fecb6a836d5c10d04e638ab91df4e6db79ce52` (2026-11-05 UTC) admitted
 workflow blob `f091a186c46ccb1db48803862a5167c78d685265` and superseded
@@ -118,7 +144,7 @@ Lyte and fails closed. So does any non-literal scope value.
 
 | Path | Git blob | Role |
 | --- | --- | --- |
-| `.github/workflows/hf-sync.yml` | `a30d6ca31f69fe58816180888ea53b12ce6380b8` | Workflow; job invokes the entrypoint with the default scope |
+| `.github/workflows/hf-sync.yml` | `b7c70df2948bee1b9a37ebe36ea90b3452a4a212` | Workflow; job invokes the entrypoint with the default scope |
 | `scripts/hf_publish_vertical_flagships_v4.py` | `199cd4d30e86c6b0e01aeb7818803bb7d68d6a70` | Entrypoint and scope dispatch |
 | `scripts/hf_publish_lyte_enterprise.py` | `7c533d753a2b913a77bb71074f04aa5b753b0392` | Lyte publisher (`SZLHOLDINGS/lyte`) |
 | `scripts/szl_release_guard.py` | `f6c7bc02df02076388be5fa0b6949d8929cc2ba2` | Lyte release primitive |

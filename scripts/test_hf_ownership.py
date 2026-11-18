@@ -1097,9 +1097,9 @@ class DynamicOwnershipContract(OwnershipContract):
 class ReviewedSourceAdmission(unittest.TestCase):
     def test_reviewed_commit_and_whole_workflow_identity_are_explicit(self):
         self.assertEqual(owner.REVIEWED_PUBLISHER_COMMIT,
-                         '0797ad096736b77bd45330ca5ebe0f14e82875ec')
+                         '382683add52d47abfd9e3f773e2e5373f9d383b7')
         self.assertEqual(owner.DYNAMIC_DEPENDENCY_BLOBS[owner.WORKFLOW_PATH],
-                         'a30d6ca31f69fe58816180888ea53b12ce6380b8')
+                         'b7c70df2948bee1b9a37ebe36ea90b3452a4a212')
         self.assertEqual(len(owner.DYNAMIC_DEPENDENCY_BLOBS) + 2, 23)
         self.assertEqual(owner.SOURCE_REQUIRED_CHECKS, REQUIRED_CHECKS)
 
