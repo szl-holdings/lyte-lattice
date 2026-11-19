@@ -1,4 +1,5 @@
 import { getRequest } from "@tanstack/react-start/server";
+import { isCrossSiteScripted } from "./fetch-metadata.ts";
 
 /**
  * Fetch-Metadata sibling isolation — **server-only** (`.server.ts` suffix).
@@ -20,7 +21,8 @@ import { getRequest } from "@tanstack/react-start/server";
  * arrive). Every cross-site / same-site *scripted* request is rejected.
  * Together with `__Host-` cookies and Better Auth's `trustedOrigins`, this
  * closes the sibling-tenant attack surface. Enforced at the `authMiddleware`
- * chokepoint (see `middleware.ts`).
+ * chokepoint (see `middleware.ts`); the raw `/api/act` and `/api/complete`
+ * routes apply the same rule via `fetch-metadata.ts`.
  */
 export class CrossSiteRequestError extends Error {
   readonly status = 403;
@@ -33,20 +35,5 @@ export class CrossSiteRequestError extends Error {
 /** Throw `CrossSiteRequestError` for a scripted cross-site/sibling request. */
 export function assertSameSiteRequest(): void {
   const request = getRequest();
-  if (!request) return; // no request context (e.g. build) — nothing to guard
-  const h = request.headers;
-  const site = h.get("sec-fetch-site");
-  // Non-browser client (no header), the app's own origin, or a direct
-  // (address-bar/bookmark) load are all fine.
-  if (!site || site === "same-origin" || site === "none") return;
-  // A top-level GET navigation (e.g. the broker's OAuth callback redirect) is
-  // fine even when it's cross-site; scripted requests never set navigate mode.
-  const dest = h.get("sec-fetch-dest");
-  const isTopLevelGet =
-    h.get("sec-fetch-mode") === "navigate" &&
-    request.method === "GET" &&
-    dest !== "object" &&
-    dest !== "embed";
-  if (isTopLevelGet) return;
-  throw new CrossSiteRequestError();
+  if (request && isCrossSiteScripted(request)) throw new CrossSiteRequestError();
 }

@@ -8,6 +8,7 @@ import {
   type CompleteInput,
   type GrokResult,
 } from "./grok-contract.ts";
+import { rejectUnsafeJsonPost } from "./auth/fetch-metadata.ts";
 
 /**
  * Server-side provider configuration. `model` is null when the configured
@@ -66,6 +67,8 @@ export async function handleComplete(
       { ok: false, error: "AI is not available in this environment" },
       { status: 503 },
     );
+  const rejected = rejectUnsafeJsonPost(request);
+  if (rejected) return rejected;
   let data: CompleteInput;
   try {
     data = validateCompleteInput(await request.json());
