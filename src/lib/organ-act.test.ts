@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { Route } from "../routes/api/act.ts";
+import { Route, buildOrganEnv } from "../routes/api/act.ts";
 
 const handlers = Route.options.server!.handlers as unknown as {
   POST: (context: { request: Request }) => Promise<Response>;
@@ -103,4 +103,55 @@ test("organ route still serves same-origin JSON requests", async () => {
   });
   assert.equal(response.status, 200);
   assert.equal((await response.json()).receipt.signed, false);
+});
+
+test("organ subprocess env is an allowlist that drops server secrets", () => {
+  const env = buildOrganEnv(
+    {
+      XAI_API_KEY: "probe-secret",
+      BETTER_AUTH_SECRET: "probe-secret",
+      DATABASE_URL: "postgres://probe-secret",
+      GROK_AUTH_CLIENT_SECRET: "probe-secret",
+      PYTHONSTARTUP: "/tmp/evil.py",
+      NODE_OPTIONS: "--require evil",
+      PATH: "/usr/bin:/bin",
+      LANG: "C.UTF-8",
+    },
+    "/srv/python",
+  );
+  for (const key of [
+    "XAI_API_KEY",
+    "BETTER_AUTH_SECRET",
+    "DATABASE_URL",
+    "GROK_AUTH_CLIENT_SECRET",
+    "PYTHONSTARTUP",
+    "NODE_OPTIONS",
+  ]) {
+    assert.equal(key in env, false, key);
+  }
+  assert.equal(env.PATH, "/usr/bin:/bin");
+  assert.equal(env.LANG, "C.UTF-8");
+  assert.equal(env.PYTHONPATH, "/srv/python");
+  assert.equal(env.PYTHONNOUSERSITE, "1");
+  assert.equal(env.PYTHONDONTWRITEBYTECODE, "1");
+  assert.equal(env.PYTHONSAFEPATH, "1");
+});
+
+test("N21 act still returns an UNSIGNED receipt with a secret in the server env", async () => {
+  const previous = process.env.XAI_API_KEY;
+  process.env.XAI_API_KEY = "probe-secret";
+  try {
+    const response = await handle({
+      request: request({ cell: "N21", payload: { code: "1 + 2 * 3" } }),
+    });
+    const text = await response.text();
+    assert.equal(response.status, 200);
+    assert.equal(text.includes("probe-secret"), false);
+    const receipt = JSON.parse(text);
+    assert.equal(receipt.receipt.signed, false);
+    assert.equal(receipt.receipt.proven_trust, false);
+  } finally {
+    if (previous === undefined) delete process.env.XAI_API_KEY;
+    else process.env.XAI_API_KEY = previous;
+  }
 });

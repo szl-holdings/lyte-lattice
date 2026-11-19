@@ -6,6 +6,34 @@ import { rejectUnsafeJsonPost } from "../../lib/auth/fetch-metadata.ts";
 const MAX_PAYLOAD = 64_000;
 const TIMEOUT_MS = 12_000;
 
+// Organs evaluate untrusted payloads and need no credentials, so the child gets
+// an exact allowlist: any secret added to the server env later stays out.
+const ORGAN_ENV_ALLOWLIST = [
+  "PATH",
+  "HOME",
+  "TMPDIR",
+  "TEMP",
+  "TMP",
+  "LANG",
+  "LC_ALL",
+  "LC_CTYPE",
+  "SYSTEMROOT",
+  "WINDIR",
+] as const;
+
+export function buildOrganEnv(base: NodeJS.ProcessEnv, pythonRoot: string): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {};
+  for (const key of ORGAN_ENV_ALLOWLIST) {
+    const value = base[key];
+    if (value !== undefined) env[key] = value;
+  }
+  env.PYTHONPATH = pythonRoot;
+  env.PYTHONDONTWRITEBYTECODE = "1";
+  env.PYTHONNOUSERSITE = "1";
+  env.PYTHONSAFEPATH = "1";
+  return env;
+}
+
 function runOrgan(cell: string, payload: unknown): Promise<{ stdout: string; stderr: string; code: number }> {
   const pythonRoot = path.join(process.cwd(), "python");
   const body = JSON.stringify(payload ?? {});
@@ -15,7 +43,7 @@ function runOrgan(cell: string, payload: unknown): Promise<{ stdout: string; std
       ["-m", "lyte_lattice", "act", "--cell", cell, "--payload", body],
       {
         cwd: pythonRoot,
-        env: { ...process.env, PYTHONPATH: pythonRoot, PYTHONDONTWRITEBYTECODE: "1" },
+        env: buildOrganEnv(process.env, pythonRoot),
         stdio: ["ignore", "pipe", "pipe"],
       },
     );
