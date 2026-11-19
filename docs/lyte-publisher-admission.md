@@ -2,11 +2,11 @@
 
 The presentation package's read-only ownership verifier admits exact Git blobs
 from `szl-holdings/a11oy`. The complete 23-file closure below received agent
-source review at verified commit `382683add52d47abfd9e3f773e2e5373f9d383b7`
-on 2026-11-18 UTC. It supersedes the admission at
-`0797ad096736b77bd45330ca5ebe0f14e82875ec`: only the bound workflow blob changed,
-from `a30d6ca31f69fe58816180888ea53b12ce6380b8` to
-`b7c70df2948bee1b9a37ebe36ea90b3452a4a212`. The other 22 files, including both
+source review at verified commit `02fe78903c859aa7ef570b96bcb36724b5d59bb4`
+on 2026-11-19 UTC. It supersedes the admission at
+`382683add52d47abfd9e3f773e2e5373f9d383b7`: only the bound workflow blob changed,
+from `b7c70df2948bee1b9a37ebe36ea90b3452a4a212` to
+`2dd856466cf59ffb5e4eafb95803144e74348168`. The other 22 files, including both
 dynamic blobs, are unchanged and no executable dependency was added or
 removed. The closure analyzer, exact-byte rejection rules and source-evidence
 gates are unchanged. This records agent source review of those bytes, not a
@@ -14,6 +14,32 @@ GitHub review approval, human-owner approval, independent execution, or
 production authorization.
 
 ## Changes reviewed for this admission
+
+- **Canonical A11oy preflight deploy window: automatic-release freeze.** All
+  three hunks of the `b7c70df2` -> `2dd85646` diff are in `preflight`, in the
+  closed-window step. It reads repository variable
+  `A11OY_AUTOMATIC_RELEASE_FREEZE` as `RELEASE_FREEZE`; when the Space is
+  `RUNNING` with a known live revision and the variable is set to anything
+  other than empty or `false`, the step exits 1 with
+  `PUBLICATION_HELD_AUTOMATIC_RELEASE_FREEZE` before any capture or admission.
+  It only adds a hold: the paused-Space, `open_deploy_window` dispatch and
+  fenced-admission paths are otherwise unchanged. The
+  `publish-vertical-flagships` job is byte-identical in both blobs (124
+  lines), so no Lyte publisher, entrypoint, sibling publisher, publication
+  target, scope, permission, secret, or Space visibility changes. The hunk
+  arrived in a11oy #3727 (`850dcf6a`).
+
+Validation re-ran the full closure comparison against a11oy `02fe7890`
+(23 files; only the workflow blob differed) and the offline ownership suites
+with the updated registry. The previous registry rejects the workflow blob,
+so the next lyte-lattice main run would fail.
+
+## Previous admission
+
+Commit `382683add52d47abfd9e3f773e2e5373f9d383b7` (2026-11-18 UTC) admitted
+workflow blob `b7c70df2948bee1b9a37ebe36ea90b3452a4a212`, superseding
+`0797ad096736b77bd45330ca5ebe0f14e82875ec`. That review is not reopened. Its
+reviewed changes were:
 
 - **Canonical A11oy preflight deploy window.** Every hunk of the
   `a30d6ca3` -> `b7c70df2` diff is in `preflight`. When the Space stage is
@@ -35,7 +61,7 @@ with the updated registry. The previous registry rejected the workflow blob
 (the failure on lyte-lattice main at `196b48d`, which landed seconds after
 #3685).
 
-## Previous admission
+Earlier admission:
 
 Commit `0797ad096736b77bd45330ca5ebe0f14e82875ec` (2026-11-18 UTC) admitted
 workflow blob `a30d6ca31f69fe58816180888ea53b12ce6380b8` and combined intelligence
@@ -144,7 +170,7 @@ Lyte and fails closed. So does any non-literal scope value.
 
 | Path | Git blob | Role |
 | --- | --- | --- |
-| `.github/workflows/hf-sync.yml` | `b7c70df2948bee1b9a37ebe36ea90b3452a4a212` | Workflow; job invokes the entrypoint with the default scope |
+| `.github/workflows/hf-sync.yml` | `2dd856466cf59ffb5e4eafb95803144e74348168` | Workflow; job invokes the entrypoint with the default scope |
 | `scripts/hf_publish_vertical_flagships_v4.py` | `199cd4d30e86c6b0e01aeb7818803bb7d68d6a70` | Entrypoint and scope dispatch |
 | `scripts/hf_publish_lyte_enterprise.py` | `7c533d753a2b913a77bb71074f04aa5b753b0392` | Lyte publisher (`SZLHOLDINGS/lyte`) |
 | `scripts/szl_release_guard.py` | `f6c7bc02df02076388be5fa0b6949d8929cc2ba2` | Lyte release primitive |
