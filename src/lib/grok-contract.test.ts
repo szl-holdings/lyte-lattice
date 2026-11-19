@@ -29,9 +29,10 @@ function bytes(text: string) {
 function sse(text: string) {
   return new Response(bytes(text), { headers: { "content-type": "text/event-stream" } });
 }
-function request(value: unknown = input) {
+function request(value: unknown = input, headers: Record<string, string> = {}) {
   return new Request("http://localhost/api/complete", {
     method: "POST",
+    headers: { "content-type": "application/json", ...headers },
     body: JSON.stringify(value),
   });
 }
@@ -478,3 +479,44 @@ test("no other source file names a Grok model id or version label", () => {
   const organ = readFileSync(new URL("python/lyte_lattice/organ.py", root), "utf8");
   assert.match(organ, new RegExp(`^GROK_MODEL_LABEL = "${DEFAULT_GROK_LABEL}"`, "m"));
 });
+
+for (const [name, headers, status] of [
+  [
+    "cross-site scripted",
+    { "sec-fetch-site": "cross-site", "sec-fetch-mode": "no-cors", origin: "https://evil.example" },
+    403,
+  ],
+  ["same-site sibling", { "sec-fetch-site": "same-site", "sec-fetch-mode": "cors" }, 403],
+  ["text/plain", { "content-type": "text/plain", "sec-fetch-site": "same-origin" }, 415],
+] as const) {
+  test(`completion route refuses a ${name} request without spending the provider key`, async (t) => {
+    const stub = t.mock.method(globalThis, "fetch", async () => {
+      throw new Error("unexpected request");
+    });
+    const response = await handleComplete(request(input, headers), {
+      apiKey: "test-only-placeholder",
+      model: DEFAULT_GROK_MODEL,
+    });
+    assert.equal(response.status, status);
+    assert.equal((await response.json()).ok, false);
+    assert.equal(stub.mock.callCount(), 0);
+  });
+}
+
+for (const [name, headers] of [
+  ["same-origin", { "sec-fetch-site": "same-origin", "sec-fetch-mode": "cors" }],
+  ["non-browser", {}],
+] as const) {
+  test(`completion route still reaches the provider for a ${name} JSON request`, async (t) => {
+    const stub = t.mock.method(globalThis, "fetch", async () =>
+      sse('data: {"choices":[{"delta":{"content":"ok"}}]}\n\ndata: [DONE]\n\n'),
+    );
+    const response = await handleComplete(request(input, headers), {
+      apiKey: "test-only-placeholder",
+      model: DEFAULT_GROK_MODEL,
+    });
+    await response.text();
+    assert.equal(response.status, 200);
+    assert.equal(stub.mock.callCount(), 1);
+  });
+}

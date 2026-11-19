@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { spawn } from "node:child_process";
 import path from "node:path";
+import { rejectUnsafeJsonPost } from "../../lib/auth/fetch-metadata.ts";
 
 const MAX_PAYLOAD = 64_000;
 const TIMEOUT_MS = 12_000;
@@ -48,6 +49,8 @@ export const Route = createFileRoute("/api/act")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const rejected = rejectUnsafeJsonPost(request);
+        if (rejected) return rejected;
         let data: unknown;
         try {
           data = await request.json();

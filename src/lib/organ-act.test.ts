@@ -7,12 +7,19 @@ const handlers = Route.options.server!.handlers as unknown as {
 };
 const handle = handlers.POST;
 
-function request(value: unknown) {
+function request(value: unknown, headers: Record<string, string> = {}) {
   return new Request("http://localhost/api/act", {
     method: "POST",
+    headers: { "content-type": "application/json", ...headers },
     body: JSON.stringify(value),
   });
 }
+
+const CROSS_SITE = {
+  "sec-fetch-site": "cross-site",
+  "sec-fetch-mode": "no-cors",
+  origin: "https://evil.example",
+};
 
 test("organ route rejects non-object request documents", async () => {
   for (const value of [null, [], true, 42, "N8"]) {
@@ -50,4 +57,50 @@ test("valid Unicode and null/default payloads retain the organ receipt contract"
     assert.equal(receipt.receipt.signed, false);
     assert.equal(receipt.receipt.proven_trust, false);
   }
+});
+
+test("organ route denies a cross-site scripted POST before reading the body", async () => {
+  const runs = await handle({
+    request: request({ cell: "N21", payload: { code: "2**10" } }, CROSS_SITE),
+  });
+  assert.equal(runs.status, 403);
+  assert.equal((await runs.json()).error, "cross-site request blocked");
+  // An oversize payload returns 413 without the guard; 403 proves the guard runs first.
+  const oversize = await handle({
+    request: request({ cell: "N8", payload: { text: "x".repeat(64_001) } }, CROSS_SITE),
+  });
+  assert.equal(oversize.status, 403);
+});
+
+test("organ route denies a same-site sibling scripted POST", async () => {
+  const response = await handle({
+    request: request(
+      { cell: "N21", payload: { code: "2**10" } },
+      { "sec-fetch-site": "same-site", "sec-fetch-mode": "cors" },
+    ),
+  });
+  assert.equal(response.status, 403);
+  assert.equal((await response.json()).error, "cross-site request blocked");
+});
+
+test("organ route requires a JSON content type", async () => {
+  const response = await handle({
+    request: request(
+      { cell: "N21", payload: { code: "2**10" } },
+      { "content-type": "text/plain", "sec-fetch-site": "same-origin" },
+    ),
+  });
+  assert.equal(response.status, 415);
+  assert.equal((await response.json()).error, "content-type must be application/json");
+});
+
+test("organ route still serves same-origin JSON requests", async () => {
+  const response = await handle({
+    request: request(
+      { cell: "N8", payload: { text: "same origin" } },
+      { "sec-fetch-site": "same-origin", "sec-fetch-mode": "cors" },
+    ),
+  });
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).receipt.signed, false);
 });
