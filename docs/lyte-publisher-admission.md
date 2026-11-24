@@ -1,5 +1,28 @@
 # Canonical Lyte publisher source admission
 
+## Shared entrypoint change at `222fad393de3c66ddba365bbc47b477568ac570b`
+
+GitHub reports a valid verified signature for this A11oy commit. Compared with
+`02fe78903c859aa7ef570b96bcb36724b5d59bb4`, 22 of the 23 reviewed Git blobs are identical. The remaining
+entrypoint, `scripts/hf_publish_vertical_flagships_v4.py`, changed from
+`199cd4d30e86c6b0e01aeb7818803bb7d68d6a70` to `431cf201e7e268f18ac3d4f0dace1c71ac49b6a8` in [A11oy #3835](https://github.com/szl-holdings/a11oy/pull/3835).
+The complete diff adds the standard-library import `urllib.parse`, named Sentra
+check contexts and an App ID, and revises `_sentra_source_admission`.
+
+The explicit Sentra route requires a consistent inventory of positive,
+App-bound protection contexts. It verifies checks for the main revision by
+name and App identity. Two PR-only checks are required in the protection
+policy and excluded from that main check-run lookup. This concerns the
+explicit `sentra` route. Lyte admits the default `estate` and explicit `lyte`
+routes, whose dispatch, publisher, source checks and target have identical
+bytes to the previous review. A regression test exercises the verifier's
+rejection of an explicit Sentra workflow scope before reading source evidence.
+
+This record covers the read-only Lyte source verifier. Sentra check authority,
+provider publication and runtime verification require separate evidence.
+
+## Previous workflow admission
+
 The presentation package's read-only ownership verifier admits exact Git blobs
 from `szl-holdings/a11oy`. The complete 23-file closure below received agent
 source review at verified commit `02fe78903c859aa7ef570b96bcb36724b5d59bb4`
@@ -13,7 +36,7 @@ gates are unchanged. This records agent source review of those bytes, not a
 GitHub review approval, human-owner approval, independent execution, or
 production authorization.
 
-## Changes reviewed for this admission
+### Changes reviewed for the previous workflow admission
 
 - **Canonical A11oy preflight deploy window: automatic-release freeze.** All
   three hunks of the `b7c70df2` -> `2dd85646` diff are in `preflight`, in the
@@ -171,7 +194,7 @@ Lyte and fails closed. So does any non-literal scope value.
 | Path | Git blob | Role |
 | --- | --- | --- |
 | `.github/workflows/hf-sync.yml` | `2dd856466cf59ffb5e4eafb95803144e74348168` | Workflow; job invokes the entrypoint with the default scope |
-| `scripts/hf_publish_vertical_flagships_v4.py` | `199cd4d30e86c6b0e01aeb7818803bb7d68d6a70` | Entrypoint and scope dispatch |
+| `scripts/hf_publish_vertical_flagships_v4.py` | `431cf201e7e268f18ac3d4f0dace1c71ac49b6a8` | Entrypoint and scope dispatch |
 | `scripts/hf_publish_lyte_enterprise.py` | `7c533d753a2b913a77bb71074f04aa5b753b0392` | Lyte publisher (`SZLHOLDINGS/lyte`) |
 | `scripts/szl_release_guard.py` | `f6c7bc02df02076388be5fa0b6949d8929cc2ba2` | Lyte release primitive |
 | `scripts/lyte_enterprise_live_contract.py` | `494116f65b24ea5b8a516abde31668be2248cbf4` | Lyte live contract |

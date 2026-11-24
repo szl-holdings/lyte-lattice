@@ -992,6 +992,15 @@ class DynamicOwnershipContract(OwnershipContract):
                         self.assertRaisesRegex(owner.ContractError, 'reviewed exact Git blobs'):
                     owner.main()
                 self.assert_nothing_after_rejection(mocks)
+    def test_cli_refuses_sibling_sentra_scope_before_source_evidence(self):
+        job = '  publish-vertical-flagships:\n    runs-on: ubuntu-latest\n'
+        changed = SYNTHETIC_WORKFLOW.replace(job, job + '    env:\n      SZL_FLAGSHIP_SCOPE: sentra\n')
+        self.set_workflow(changed)
+        with self.cli(self.cli_inputs()) as mocks, self.assertRaisesRegex(
+                owner.ContractError, 'outside the admitted closure'):
+            owner.main()
+        self.assert_nothing_after_rejection(mocks)
+
     def test_cli_rejects_changed_dependency_before_network_or_receipt(self):
         for path in EXPECTED_DEPENDENCIES:
             for mutation in ('changed', 'crlf'):
@@ -1097,7 +1106,9 @@ class DynamicOwnershipContract(OwnershipContract):
 class ReviewedSourceAdmission(unittest.TestCase):
     def test_reviewed_commit_and_whole_workflow_identity_are_explicit(self):
         self.assertEqual(owner.REVIEWED_PUBLISHER_COMMIT,
-                         '02fe78903c859aa7ef570b96bcb36724b5d59bb4')
+                         '222fad393de3c66ddba365bbc47b477568ac570b')
+        self.assertEqual(owner.DYNAMIC_ENTRYPOINT_BLOB,
+                         '431cf201e7e268f18ac3d4f0dace1c71ac49b6a8')
         self.assertEqual(owner.DYNAMIC_DEPENDENCY_BLOBS[owner.WORKFLOW_PATH],
                          '2dd856466cf59ffb5e4eafb95803144e74348168')
         self.assertEqual(len(owner.DYNAMIC_DEPENDENCY_BLOBS) + 2, 23)
