@@ -32,12 +32,12 @@ SOURCE_REQUIRED_CHECKS = (
 # publisher, its 17 source gates and both pinned controllers are unchanged.
 # Admission scope and reviewed identities: docs/lyte-publisher-admission.md.
 # A new publisher, entrypoint, route or closure file requires a separate review.
-REVIEWED_PUBLISHER_COMMIT = '02fe78903c859aa7ef570b96bcb36724b5d59bb4'
+REVIEWED_PUBLISHER_COMMIT = '222fad393de3c66ddba365bbc47b477568ac570b'
 PUBLISHER_PATH = 'scripts/hf_publish_lyte_enterprise.py'
 ENTRYPOINT_PATH = 'scripts/hf_publish_vertical_flagships_v4.py'
 WORKFLOW_PATH = '.github/workflows/hf-sync.yml'
 DYNAMIC_PUBLISHER_BLOB = '7c533d753a2b913a77bb71074f04aa5b753b0392'
-DYNAMIC_ENTRYPOINT_BLOB = '199cd4d30e86c6b0e01aeb7818803bb7d68d6a70'
+DYNAMIC_ENTRYPOINT_BLOB = '431cf201e7e268f18ac3d4f0dace1c71ac49b6a8'
 # The workflow runs the entrypoint without SZL_FLAGSHIP_SCOPE, so its default
 # estate route executes in ONE process: the generated-flagship publisher, then
 # the Lyte publisher, then the combined vertical-services publisher. Bind that
