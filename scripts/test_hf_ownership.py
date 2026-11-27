@@ -1106,13 +1106,34 @@ class DynamicOwnershipContract(OwnershipContract):
 class ReviewedSourceAdmission(unittest.TestCase):
     def test_reviewed_commit_and_whole_workflow_identity_are_explicit(self):
         self.assertEqual(owner.REVIEWED_PUBLISHER_COMMIT,
-                         '222fad393de3c66ddba365bbc47b477568ac570b')
+                         'dd3198d427d2a28dd060b54f4de693ab4f39a9ca')
+        self.assertEqual(owner.DYNAMIC_PUBLISHER_BLOB,
+                         '5d938ce3406ca6464c290e42bb31723017afa23c')
         self.assertEqual(owner.DYNAMIC_ENTRYPOINT_BLOB,
                          '431cf201e7e268f18ac3d4f0dace1c71ac49b6a8')
         self.assertEqual(owner.DYNAMIC_DEPENDENCY_BLOBS[owner.WORKFLOW_PATH],
-                         '2dd856466cf59ffb5e4eafb95803144e74348168')
+                         'ad029ab35e92c91e153358882944949066e0a4a3')
         self.assertEqual(len(owner.DYNAMIC_DEPENDENCY_BLOBS) + 2, 23)
         self.assertEqual(owner.SOURCE_REQUIRED_CHECKS, REQUIRED_CHECKS)
+
+    def test_run_45632842303_requires_the_measured_a11oy_main_closure(self):
+        """Run 45632842303 refused a11oy main before any source-evidence read.
+
+        The checked-out workflow blob was 46d91291729b9496ebbffe0499d89661f15fda48
+        (a11oy #3876, 0d611051): one harden-runner pin in publish-vertical-flagships.
+        a11oy main dd3198d4, reviewed for admission, binds workflow ad029ab3 and
+        Lyte publisher 5d938ce3. These literals are the measured Git blobs, not
+        copies of the registry. The exact-blob gate must name them.
+        """
+        self.assertEqual(owner.REVIEWED_PUBLISHER_COMMIT,
+                         'dd3198d427d2a28dd060b54f4de693ab4f39a9ca')
+        self.assertEqual(owner.DYNAMIC_PUBLISHER_BLOB,
+                         '5d938ce3406ca6464c290e42bb31723017afa23c')
+        self.assertEqual(owner.DYNAMIC_DEPENDENCY_BLOBS[owner.WORKFLOW_PATH],
+                         'ad029ab35e92c91e153358882944949066e0a4a3')
+        self.assertEqual(owner.DYNAMIC_ENTRYPOINT_BLOB,
+                         '431cf201e7e268f18ac3d4f0dace1c71ac49b6a8')
+        self.assertEqual(len(owner.DYNAMIC_DEPENDENCY_BLOBS) + 2, 23)
 
     def test_admission_document_matches_every_reviewed_source_identity(self):
         document = (Path(__file__).resolve().parents[1] /

@@ -1,5 +1,77 @@
 # Canonical Lyte publisher source admission
 
+## Closure admission at `dd3198d427d2a28dd060b54f4de693ab4f39a9ca`
+
+GitHub reports a valid verified signature for this A11oy commit. Compared with
+`222fad393de3c66ddba365bbc47b477568ac570b`, 21 of the 23 reviewed Git blobs are
+identical. Two blobs changed. The exact-blob gate is unchanged: the previous
+registry rejects both, which is why lyte-lattice main stayed red.
+
+### Why run 45632842303 failed
+
+Lyte-lattice run
+[45632842303](https://github.com/szl-holdings/lyte-lattice/actions/runs/45632842303)
+(2026-11-25T14:20Z, main `4ae9a16`) exited in `validate_publisher_closure`
+before any backend source read:
+
+`Publisher dependency requires a reviewed exact Git blob: .github/workflows/hf-sync.yml`
+
+The workflow checks out `szl-holdings/a11oy` at `main`. At that minute the
+workflow blob was `46d91291729b9496ebbffe0499d89661f15fda48`, from a11oy #3876
+(`0d611051c638`, "chore(deps): bump the actions group with 5 updates"). Against
+the previously admitted blob that diff is one line, inside
+`publish-vertical-flagships`: `step-security/harden-runner` moves from
+`1d88384fd173af6ecb012dfd0264a306b711241a` (v2.22.4) to
+`aebdcf6156ab6691adf63218240e476564a1ed4c` (v2.23.0). `egress-policy` stays
+`audit`. No other job, permission, secret, scope, publisher command, or Space
+target changes in that commit. The Lyte publisher blob was still
+`7c533d753a2b913a77bb71074f04aa5b753b0392`.
+
+### Workflow bytes admitted now
+
+`.github/workflows/hf-sync.yml` moves from
+`2dd856466cf59ffb5e4eafb95803144e74348168` to
+`ad029ab35e92c91e153358882944949066e0a4a3`. That blob is first present at
+a11oy `891d77597c7f` (#3935) and is still the file at `dd3198d4`. Relative to
+`2dd85646` the complete diff is:
+
+- **`publish-vertical-flagships`.** The same one-line harden-runner pin as
+  #3876. The job condition, needs, concurrency, `HUGGING_FACE_HUB_TOKEN`
+  secret, entrypoint command, and absence of `SZL_FLAGSHIP_SCOPE` are
+  unchanged. The job stays 125 lines. Lyte-lattice's own caller already pins
+  this same harden-runner commit.
+- **`readiness-verdict`, `execution-readiness`, and `relock`.** These jobs are
+  not on the Lyte publisher route. They add `if: always()` artifact uploads
+  named `canonical-a11oy-passive-${{ github.run_id }}-current` and
+  `canonical-a11oy-readiness-${{ github.run_id }}-current` (`overwrite: true`)
+  and point the later downloads at those aliases. The attempt-scoped uploads
+  remain. No permission, secret, scope, or Space write changes. The hunks
+  arrived in a11oy #3861 (`79677d41ded4`, blob `e53c6dc63d6c41c0522650e5e8331772b894f4ac`)
+  and #3935 (`891d77597c7f`, blob `ad029ab35e92c91e153358882944949066e0a4a3`).
+
+### Lyte publisher bytes admitted now
+
+`scripts/hf_publish_lyte_enterprise.py` moves from
+`7c533d753a2b913a77bb71074f04aa5b753b0392` to
+`5d938ce3406ca6464c290e42bb31723017afa23c` in a11oy #3928
+(`a254266019b856a950aeaca7c52e2d40eceaba21`). The diff is two lines:
+`EXPECTED_VERSION` `"4.0.0"` to `"4.0.1"`, and the adjacent comment that names
+the application version. `HF_REPOSITORY` stays `SZLHOLDINGS/lyte`, `ORIGIN`
+stays `https://szlholdings-lyte.hf.space`, `SOURCE_REPOSITORY` stays
+`szl-holdings/lyte-services`, and `SOURCE_REQUIRED_CHECKS` is unchanged.
+`szl-holdings/lyte-services` `lyte/__init__.py` on main
+(`6a456fc61323b063547cc97cc1a2f09d9ef5af51`, signature verified) defines
+`__version__ = "4.0.1"`. The controller pin stays
+`szl-holdings/.github@163a61fd9759e5ecc3c2daf13e528f7b281ff81d` (blob
+`3fa968416a3623d66b5b5b64abf8b830cc854e1c`). No visibility, credential, or
+target change.
+
+The entrypoint blob and the other 20 dependency blobs are unchanged. This
+records agent source review of those bytes, not a GitHub review approval,
+human-owner approval, independent execution, or production authorization.
+Admitting the previous workflow blob alone would still fail: a11oy main no
+longer has it, and the publisher blob has also moved.
+
 ## Shared entrypoint change at `222fad393de3c66ddba365bbc47b477568ac570b`
 
 GitHub reports a valid verified signature for this A11oy commit. Compared with
@@ -193,9 +265,9 @@ Lyte and fails closed. So does any non-literal scope value.
 
 | Path | Git blob | Role |
 | --- | --- | --- |
-| `.github/workflows/hf-sync.yml` | `2dd856466cf59ffb5e4eafb95803144e74348168` | Workflow; job invokes the entrypoint with the default scope |
+| `.github/workflows/hf-sync.yml` | `ad029ab35e92c91e153358882944949066e0a4a3` | Workflow; job invokes the entrypoint with the default scope |
 | `scripts/hf_publish_vertical_flagships_v4.py` | `431cf201e7e268f18ac3d4f0dace1c71ac49b6a8` | Entrypoint and scope dispatch |
-| `scripts/hf_publish_lyte_enterprise.py` | `7c533d753a2b913a77bb71074f04aa5b753b0392` | Lyte publisher (`SZLHOLDINGS/lyte`) |
+| `scripts/hf_publish_lyte_enterprise.py` | `5d938ce3406ca6464c290e42bb31723017afa23c` | Lyte publisher (`SZLHOLDINGS/lyte`) |
 | `scripts/szl_release_guard.py` | `f6c7bc02df02076388be5fa0b6949d8929cc2ba2` | Lyte release primitive |
 | `scripts/lyte_enterprise_live_contract.py` | `494116f65b24ea5b8a516abde31668be2248cbf4` | Lyte live contract |
 | `scripts/hf_existing_space_guard.py` | `ebab5d507ba589bb64d01a45bf32a03c2b52cb45` | Existing-Space guard on `HfApi.create_repo` |
