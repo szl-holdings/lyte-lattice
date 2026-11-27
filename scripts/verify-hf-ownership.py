@@ -28,22 +28,25 @@ SOURCE_REQUIRED_CHECKS = (
 )
 # Reviewed immutable szl-holdings/a11oy blobs. The complete closure was reviewed
 # at REVIEWED_PUBLISHER_COMMIT, including the native presentation and Sentra
-# observation-budget helpers loaded by the generated-flagship route. The Lyte
-# publisher, its 17 source gates and both pinned controllers are unchanged.
+# observation-budget helpers loaded by the generated-flagship route. Against
+# 222fad39, two blobs changed: the workflow (one harden-runner pin in
+# publish-vertical-flagships, plus rerun evidence aliases outside that job)
+# and the Lyte publisher (EXPECTED_VERSION 4.0.0 to 4.0.1). The 17 source
+# gates, entrypoint, and both pinned controllers are unchanged.
 # Admission scope and reviewed identities: docs/lyte-publisher-admission.md.
 # A new publisher, entrypoint, route or closure file requires a separate review.
-REVIEWED_PUBLISHER_COMMIT = '222fad393de3c66ddba365bbc47b477568ac570b'
+REVIEWED_PUBLISHER_COMMIT = 'dd3198d427d2a28dd060b54f4de693ab4f39a9ca'
 PUBLISHER_PATH = 'scripts/hf_publish_lyte_enterprise.py'
 ENTRYPOINT_PATH = 'scripts/hf_publish_vertical_flagships_v4.py'
 WORKFLOW_PATH = '.github/workflows/hf-sync.yml'
-DYNAMIC_PUBLISHER_BLOB = '7c533d753a2b913a77bb71074f04aa5b753b0392'
+DYNAMIC_PUBLISHER_BLOB = '5d938ce3406ca6464c290e42bb31723017afa23c'
 DYNAMIC_ENTRYPOINT_BLOB = '431cf201e7e268f18ac3d4f0dace1c71ac49b6a8'
 # The workflow runs the entrypoint without SZL_FLAGSHIP_SCOPE, so its default
 # estate route executes in ONE process: the generated-flagship publisher, then
 # the Lyte publisher, then the combined vertical-services publisher. Bind that
 # whole route, plus the workflow job's own source, plan and completion gates.
 DYNAMIC_DEPENDENCY_BLOBS = {
-    WORKFLOW_PATH: '2dd856466cf59ffb5e4eafb95803144e74348168',
+    WORKFLOW_PATH: 'ad029ab35e92c91e153358882944949066e0a4a3',
     'scripts/szl_release_guard.py': 'f6c7bc02df02076388be5fa0b6949d8929cc2ba2',
     'scripts/lyte_enterprise_live_contract.py': '494116f65b24ea5b8a516abde31668be2248cbf4',
     'scripts/hf_existing_space_guard.py': 'ebab5d507ba589bb64d01a45bf32a03c2b52cb45',
